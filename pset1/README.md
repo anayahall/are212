@@ -1,1 +1,2 @@
-# are212
+# are212 - problem set 1
+feb 7, 2017
