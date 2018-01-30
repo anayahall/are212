@@ -1,9 +1,7 @@
 ---
 title: "Problem Set 1"
 author: "Anaya Hall"
-date: "January 27, 2018"
-output:
-  html_document: default
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -27,10 +25,10 @@ Due Feb. 7, 2017
 
 ### PART 2: Applied - Carbon & Income
 
-1. Download World Bank’s **World Development Indicators** (from Data Center): <http://databank.worldbank.org/data/reports.aspx?source=world-development-indicators>
+#####1. Download World Bank’s **World Development Indicators** (from Data Center): <http://databank.worldbank.org/data/reports.aspx?source=world-development-indicators>
 Downloaded Jan. 27, 2018. 
 
-2. Load data into R
+#####2. Load data into R
 
 ```{r message=FALSE}
 
@@ -62,7 +60,7 @@ wdi_data <- rename(wide, CO2 = "2010 [YR2010].CO2 emissions (kt)",
 
 There are 194 countries with complete observations for the three series of interest. 
 
-3. Calculate a table of showing the sample mean, standard deviation, minimum and maximum for each series:
+#####3. Calculate a table of showing the sample mean, standard deviation, minimum and maximum for each series:
 
 
 ```{r results = 'hide', message=FALSE}
@@ -70,7 +68,7 @@ summary(wdi_data)
 sapply(wdi_data, sd)
 ```
 
-Series      | CO2 (tk)      |  GDP (2010 USD)   | POP           |
+Series      | CO2 (tk)      |  GDP (2010 USD)   | POP (persons)    |
 ------------- | ------------- | ------------- | ------------- | 
 Mean          | 162317        | 3.364e+11     | 7.066e+6
 SD            | 7.630124e+05  | 1.297364e+12  | 1.346430e+08
@@ -79,12 +77,12 @@ Max           | 8776040       | 1.496e+13     | 1.338e+09
 
 
 
-4. Create a histogram for CO2 and GDP (15 buckets).
+#####4. Create a histogram for CO2 and GDP (15 buckets).
 
 ```{r pressure}
 hist(wdi_data$CO2, breaks=15)
 
-hist(wdi_data$GDP)
+hist(wdi_data$GDP, breaks=15)
 
 ```
 
@@ -96,19 +94,19 @@ ggplot(data=wdi_data, aes(x= GDP, y = CO2)) + geom_point() + ylab("CO2 Emissions
 ```
   
 
-6. Create new variable “Per capita CO2 emissions” called CO2pc.
+#####6. Create new variable “Per capita CO2 emissions” called CO2pc.
 
 ```{r}
 wdi_data$CO2pc <- wdi_data$CO2/wdi_data$POP
 ```
 
-7. Create a new variable “Per capita GDP” GDPpc.
+#####7. Create a new variable “Per capita GDP” GDPpc.
 
 ```{r}
 wdi_data$GDPpc <- wdi_data$GDP/wdi_data$POP
 ```
 
-8. Plot CO2pc against GDPpc.
+#####8. Plot CO2pc against GDPpc.
 
 ```{r echo=FALSE}
 
@@ -116,7 +114,7 @@ ggplot(data=wdi_data, aes(x= GDPpc, y = CO2pc)) + geom_point() + ylab("Per capit
 
 ```
 
-9. Create demeaned variables of CO2pc and GDPpc called CO2pcdev and GDPpcdev by subtracting the sample mean from each observation.
+#####9. Create demeaned variables of CO2pc and GDPpc called CO2pcdev and GDPpcdev by subtracting the sample mean from each observation.
 
 ```{r}
 #Get sample mean of per capita CO2 emissions
@@ -131,7 +129,7 @@ wdi_data$GDPpcdev <- wdi_data$GDPpc - gdpmean
 ```
 
 
-10. Plot CO2pcdev against GDPpcdev.
+#####10. Plot CO2pcdev against GDPpcdev.
 
 ```{r echo=FALSE}
 
@@ -139,7 +137,7 @@ ggplot(data=wdi_data, aes(x= GDPpcdev, y = CO2pcdev)) + geom_point() + ylab("Per
 
 ```
 
-11. Create the variables CO2pcln and GDPpcln by taking natural logs of CO2pc and GDPpc.
+#####11. Create the variables CO2pcln and GDPpcln by taking natural logs of CO2pc and GDPpc.
 
 ```{r}
 
@@ -151,7 +149,7 @@ wdi_data$GDPpcln <- log(wdi_data$GDPpc)
 
 ```
 
-12. Plot CO2pcln and GDPpcln.
+#####12. Plot CO2pcln and GDPpcln.
 
 ```{r}
 
@@ -160,7 +158,7 @@ ggplot(data=wdi_data, aes(x= GDPpcln, y = CO2pcln)) + geom_point() + ylab("Log P
 ```
 
 
-13. Export your data as a comma delimited ascii file.
+#####13. Export your data as a comma delimited ascii file.
 
 ```{r}
 
@@ -170,17 +168,22 @@ write.csv(wdi_data, "wdi_data.csv")
 
 ***
 
-14. Regress CO2pc on GDPpc without an intercept. Write down your regression coefficient. Now multiply CO2pc by 1000, changing its units to tons instead of kilotons. Run the regression again. What has happened to the coefficient on GDPpc? Now divide GDPpc by 1000, changing its units to thousands of $ instead of $. Run the regression again. What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
+#####14. Regress CO2pc on GDPpc without an intercept. 
+Write down your regression coefficient. Now multiply CO2pc by 1000, changing its units to tons instead of kilotons. Run the regression again. What has happened to the coefficient on GDPpc? Now divide GDPpc by 1000, changing its units to thousands of $ instead of $. Run the regression again. What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
 
-15. For the last regression from the previous part calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2.Then calculate the predicted values and plot them against the actual CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs, but briefly talk about what these figures tell you about fit and the validity of the constant variance assumption. Also - are there any outliers?
+#####15. For the last regression from the previous part calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2.Then calculate the predicted values and plot them against the actual CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs, but briefly talk about what these figures tell you about fit and the validity of the constant variance assumption. Also - are there any outliers?
 
-16. Regress CO2pc on GDPpc and an intercept. Calculate and report n, df = n − k, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Then calculate the predicted values and plot them against CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs. Use the pictures and results to talk about how the fit has improved or not.
+#####16. Regress CO2pc on GDPpc and an intercept. 
+Calculate and report n, df = n − k, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Then calculate the predicted values and plot them against CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs. Use the pictures and results to talk about how the fit has improved or not.
 
-17. Regress CO2pc on an intercept, GDPpc and GDPpc2, where GDPpc2 is the square of GNIpc. Calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Then calculate the predicted values and plot them against CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs. Use the pictures and results to talk about how the fit has improved or not. Also briefly address whether including GDPpc2 in the regression is violates any of our assumptions. Does this specification make economic sense?
+#####17. Regress CO2pc on an intercept, GDPpc and GDPpc2, where GDPpc2 is the square of GNIpc. 
+Calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Then calculate the predicted values and plot them against CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs. Use the pictures and results to talk about how the fit has improved or not. Also briefly address whether including GDPpc2 in the regression is violates any of our assumptions. Does this specification make economic sense?
 
-18. The power of FWT. Calculate demeaned versions of CO2pc, GDPpc and GDPpc2. Regress the demeaned CO2pc on the demeaned GDPpc and GDPpc2. Compare your parameter estimates to the result from the previous part.
+#####18. The power of FWT. 
+Calculate demeaned versions of CO2pc, GDPpc and GDPpc2. Regress the demeaned CO2pc on the demeaned GDPpc and GDPpc2. Compare your parameter estimates to the result from the previous part.
 
-19. More power of FWT. Regress CO2pc on GDPpc. Save your residuals. Now regress the columns of [i GDPpc2] on GDPpc. Save your residuals (an n × 2 matrix of residuals). Now regress the first vector of n residuals on the (n × 2) matrix of residuals. Report your findings.
+#####19. More power of FWT. 
+Regress CO2pc on GDPpc. Save your residuals. Now regress the columns of [i GDPpc2] on GDPpc. Save your residuals (an n × 2 matrix of residuals). Now regress the first vector of n residuals on the (n × 2) matrix of residuals. Report your findings.
 
 
 
