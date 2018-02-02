@@ -5,6 +5,8 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
+library(knitr)
+opts_chunk$set(cache = T)
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(ggplot2)
@@ -169,6 +171,8 @@ write.csv(wdi_data, "wdi_data.csv")
 ***
 
 #####14. Regress CO2pc on GDPpc without an intercept. 
+
+
 Write down your regression coefficient. Now multiply CO2pc by 1000, changing its units to tons instead of kilotons. Run the regression again. What has happened to the coefficient on GDPpc? Now divide GDPpc by 1000, changing its units to thousands of $ instead of $. Run the regression again. What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
 
 #####15. For the last regression from the previous part calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2.Then calculate the predicted values and plot them against the actual CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs, but briefly talk about what these figures tell you about fit and the validity of the constant variance assumption. Also - are there any outliers?
