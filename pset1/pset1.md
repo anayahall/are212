@@ -156,9 +156,117 @@ write.csv(wdi_data, "wdi_data.csv")
 
 ##### 14. Regress CO2pc on GDPpc without an intercept.
 
-Write down your regression coefficient. Now multiply CO2pc by 1000, changing its units to tons instead of kilotons. Run the regression again. What has happened to the coefficient on GDPpc? Now divide GDPpc by 1000, changing its units to thousands of $ instead of $. Run the regression again. What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
+``` r
+# Function to calculate beta coefficient without an intercept 
+b_ols1 <- function(data, y, X) {
+  # Require the 'dplyr' package
+  require(dplyr)
+  
+  # Create the y matrix
+  y_data <- data %>%
+    # Select y variable data from 'data'
+    select_(.dots = y) %>%
+    # Convert y_data to matrices
+    as.matrix()
+  
+  # Create the X matrix
+  X_data <- data %>%
+    # Select X variable data from 'data'
+    select_(.dots = X) %>%
+    # Convert X_data to matrices
+    as.matrix()
+  
+  # Calculate beta hat
+  beta_hat <- solve(t(X_data) %*% X_data) %*% t(X_data) %*% y_data
+  # Change the name of 'ones' to 'intercept'
+  rownames(beta_hat) <- c(X)
+  # Return beta_hat
+  return(beta_hat)
+}
 
-##### 15. For the last regression from the previous part calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2.Then calculate the predicted values and plot them against the actual CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs, but briefly talk about what these figures tell you about fit and the validity of the constant variance assumption. Also - are there any outliers?
+# Regress CO2pc on GDPpc without an intercept
+b_ols1(data=wdi_data, y="CO2pc", X="GDPpc")
+```
+
+    ##              CO2pc
+    ## GDPpc 2.233062e-07
+
+###### Write down your regression coefficient.
+
+*Regression coefficient: 2.233062e-07*
+
+Now multiply CO2pc by 1000, changing its units to tons instead of kilotons. Run the regression again.
+
+``` r
+wdi_data$CO2pc_tons <- wdi_data$CO2pc*1000 #Change units of per capita CO2 conc to tons
+
+# Rerun regression
+b_ols1(data=wdi_data, y="CO2pc_tons", X="GDPpc")
+```
+
+    ##         CO2pc_tons
+    ## GDPpc 0.0002233062
+
+###### What has happened to the coefficient on GDPpc?
+
+*Coefficient GDPpc is now 0.0002233062, four orders of magnitude larger*
+
+Now divide GDPpc by 1000, changing its units to thousands of $ instead of $. Run the regression again.
+
+``` r
+wdi_data$GDPpc_thous <- wdi_data$GDPpc*(1/1000)
+
+b_ols1(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous")
+```
+
+    ##             CO2pc_tons
+    ## GDPpc_thous  0.2233062
+
+###### What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
+
+*Coefficient is now 0.2233062, four more orders of magnitude larger*
+
+##### 15. For the last regression from the previous part calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2.
+
+``` r
+sample_size <- function(data) {
+  
+  #some stuff
+  n <- count(data)
+  return(n)
+}
+
+deg_freedom <- function(data) {
+  n <- count(data)
+  df <- n - count(x)
+}
+
+# b?
+# 
+# rsq_uc <- function() {}
+# 
+# rsq <- function() {}
+# 
+# adj_rsq <- function() {}
+# 
+# akaikeIC <- function() {}
+#   
+# bsIC <- function() {}
+# 
+# std_error <- function() {}
+# 
+# pred_vals <- 
+
+
+count(wdi_data)
+```
+
+    ## # A tibble: 1 x 1
+    ##       n
+    ##   <int>
+    ## 1   194
+
+Then calculate the predicted values and plot them against the actual CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs, but briefly talk about what these figures tell you about fit and the validity of the constant variance assumption. Also - are there any outliers?
 
 ##### 16. Regress CO2pc on GDPpc and an intercept.
 

@@ -206,7 +206,7 @@ b_ols1(data=wdi_data, y="CO2pc", X="GDPpc")
 
 ```
 
-Write down your regression coefficient. 
+######Write down your regression coefficient. 
 
 *Regression coefficient: 2.233062e-07*
 
@@ -221,7 +221,7 @@ b_ols1(data=wdi_data, y="CO2pc_tons", X="GDPpc")
 
 ```
 
-What has happened to the coefficient on GDPpc? 
+######What has happened to the coefficient on GDPpc? 
 
 *Coefficient GDPpc is now 0.0002233062, four orders of magnitude larger*
 
@@ -236,7 +236,7 @@ b_ols1(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous")
 ```
 
 
-What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
+######What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
 
 *Coefficient is now 0.2233062, four more orders of magnitude larger*
 
@@ -256,21 +256,21 @@ deg_freedom <- function(data) {
   df <- n - count(x)
 }
 
-b?
-
-rsq_uc <- function() {}
-
-rsq <- function() {}
-
-adj_rsq <- function() {}
-
-akaikeIC <- function() {}
-  
-bsIC <- function() {}
-
-std_error <- function() {}
-
-pred_vals <- 
+# b?
+# 
+# rsq_uc <- function() {}
+# 
+# rsq <- function() {}
+# 
+# adj_rsq <- function() {}
+# 
+# akaikeIC <- function() {}
+#   
+# bsIC <- function() {}
+# 
+# std_error <- function() {}
+# 
+# pred_vals <- 
 
 
 count(wdi_data)
