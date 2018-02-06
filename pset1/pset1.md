@@ -71,12 +71,12 @@ sapply(wdi_data, sd)
     ## Warning in var(if (is.vector(x) || is.factor(x)) x else as.double(x), na.rm
     ## = na.rm): NAs introduced by coercion
 
-| Series | CO2 (kt)     | GDP (2010 Billions USD) | POP (persons) |
-|--------|--------------|-------------------------|---------------|
-| Mean   | 162317       | 3.364e+11               | 3.522e+07     |
-| SD     | 7.630124e+05 | 1.297364e+12            | 1.346430e+08  |
-| Min    | 7            | 3.182e+07               | 1.002e+04     |
-| Max    | 8776040      | 1.496e+13               | 1.338e+09     |
+| Series | CO2 (kt)     | GDP (Billion USD (2010)) | POP (persons) |
+|--------|--------------|--------------------------|---------------|
+| Mean   | 162317       | 3.364e+11                | 3.522e+07     |
+| SD     | 7.630124e+05 | 1.297364e+12             | 1.346430e+08  |
+| Min    | 7            | 3.182e+07                | 1.002e+04     |
+| Max    | 8776040      | 1.496e+13                | 1.338e+09     |
 
 ##### 4. Create a histogram for CO2 and GDP (15 buckets).
 
@@ -174,9 +174,9 @@ b_ols <- function(data, y, X, include_i) {
   X_data <- select_(data, .dots = X)
   # Convert X_data to matrices
   X_data <- as.matrix(X_data)
-  # Add a column of ones to front
+  # If include intercept == TRUE: Add a column of ones to front
   if(include_i) {X_data <- cbind(1, X_data)
-  colnames(X_data)[1] <- "ones"}
+      colnames(X_data)[1] <- "ones"}
   
   # Calculate beta hat
   beta_hat <- solve(t(X_data) %*% X_data) %*% t(X_data) %*% y_data
@@ -214,17 +214,16 @@ b_ols <- function(data, y, X, include_i) {
   # s2
   s2 <- (t(e) %*% e)/(n-k)
   
-  #residuals
-  # res <- 
-  
+  # Residuals
+
   reg_list <- c("Beta_hat" = beta_hat, "n" = n, "dof" = dof, "ruc_sq" = ruc_sq, "r_sq" = r_sq, "Adj_R2" = adj_r2, "AIC" = aic, "SIC" = sic, "s2" = s2)
-  
+
   return(reg_list)
-  
+
   }
 
 # Regress CO2pc on GDPpc without an intercept
-b_ols(data=wdi_data, y="CO2pc", X="GDPpc", include_i = FALSE)
+b_ols(data=wdi_data, y="CO2pc", X="GDPpc", include_i = FALSE) 
 ```
 
     ##      Beta_hat             n           dof        ruc_sq          r_sq 
@@ -252,7 +251,7 @@ b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc", include_i = FALSE)
 
 ###### What has happened to the coefficient on GDPpc?
 
-*Coefficient GDPpc is now 0.0002233062, four orders of magnitude larger*
+*Coefficient GDPpc is now 0.0002233062, three orders of magnitude larger*
 
 Now divide GDPpc by 1000, changing its units to thousands of $ instead of $. Run the regression again.
 
@@ -269,7 +268,7 @@ b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous", include_i = FALSE)
 
 ###### What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
 
-*Coefficient is now 0.2233062, four more orders of magnitude larger*
+*Coefficient is now 0.2233062, three more orders of magnitude larger*
 
 ##### 15. For the last regression from the previous part calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2.
 
