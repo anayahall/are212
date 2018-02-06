@@ -11,9 +11,9 @@ Due Feb. 7, 2017
 
 ------------------------------------------------------------------------
 
-### PART 1: Theory (Practice Only)
+### PART 1: Theory
 
-1-3. *come back to this!*
+*Practice Only*
 
 ------------------------------------------------------------------------
 
@@ -71,12 +71,12 @@ sapply(wdi_data, sd)
     ## Warning in var(if (is.vector(x) || is.factor(x)) x else as.double(x), na.rm
     ## = na.rm): NAs introduced by coercion
 
-| Series | CO2 (tk)     | GDP (2010 USD) | POP (persons) |
-|--------|--------------|----------------|---------------|
-| Mean   | 162317       | 3.364e+11      | 7.066e+6      |
-| SD     | 7.630124e+05 | 1.297364e+12   | 1.346430e+08  |
-| Min    | 7            | 3.182e+07      | 1.002e+04     |
-| Max    | 8776040      | 1.496e+13      | 1.338e+09     |
+| Series | CO2 (kt)     | GDP (2010 Billions USD) | POP (persons) |
+|--------|--------------|-------------------------|---------------|
+| Mean   | 162317       | 3.364e+11               | 3.522e+07     |
+| SD     | 7.630124e+05 | 1.297364e+12            | 1.346430e+08  |
+| Min    | 7            | 3.182e+07               | 1.002e+04     |
+| Max    | 8776040      | 1.496e+13               | 1.338e+09     |
 
 ##### 4. Create a histogram for CO2 and GDP (15 buckets).
 
@@ -90,9 +90,9 @@ hist(wdi_data$CO2, breaks=15)
 hist(wdi_data$GDP, breaks=15)
 ```
 
-![](pset1_files/figure-markdown_github-ascii_identifiers/pressure-2.png)
-
 ![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-1.png)
+
+![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-4-1.png)
 
 ##### 6. Create new variable “Per capita CO2 emissions” called CO2pc.
 
@@ -108,7 +108,7 @@ wdi_data$GDPpc <- wdi_data$GDP/wdi_data$POP
 
 ##### 8. Plot CO2pc against GDPpc.
 
-![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-6-1.png)
+![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png)
 
 ##### 9. Create demeaned variables of CO2pc and GDPpc called CO2pcdev and GDPpcdev by subtracting the sample mean from each observation.
 
@@ -126,7 +126,7 @@ wdi_data$GDPpcdev <- wdi_data$GDPpc - gdpmean
 
 ##### 10. Plot CO2pcdev against GDPpcdev.
 
-![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-1.png)
+![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
 
 ##### 11. Create the variables CO2pcln and GDPpcln by taking natural logs of CO2pc and GDPpc.
 
@@ -141,10 +141,10 @@ wdi_data$GDPpcln <- log(wdi_data$GDPpc)
 ##### 12. Plot CO2pcln and GDPpcln.
 
 ``` r
-ggplot(data=wdi_data, aes(x= GDPpcln, y = CO2pcln)) + geom_point() + ylab("Log Per capita CO2 Emissions (kt)") + xlab("Log Per capita GDP (USD 2010)") + labs(title="CO2 Emissions by GDP")
+ggplot(data=wdi_data, aes(x= GDPpcln, y = CO2pcln)) + geom_point() + ylab("Log Per capita CO2 Emissions (kt)") + xlab("Log Per capita GDP (USD 2010)") + labs(title="Logged CO2 Emissions vs Logged GDP by Country")
 ```
 
-![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
+![](pset1_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-1.png)
 
 ##### 13. Export your data as a comma delimited ascii file.
 
@@ -158,7 +158,7 @@ write.csv(wdi_data, "wdi_data.csv")
 
 ``` r
 # Function to calculate beta coefficient without an intercept 
-b_ols1 <- function(data, y, X) {
+b_ols <- function(data, y, X, include_i) {
   # Require the 'dplyr' package
   require(dplyr)
   
@@ -166,30 +166,71 @@ b_ols1 <- function(data, y, X) {
   y_data <- data %>%
     # Select y variable data from 'data'
     select_(.dots = y) %>%
+    #if(include_i)
     # Convert y_data to matrices
     as.matrix()
   
-  # Create the X matrix
-  X_data <- data %>%
-    # Select X variable data from 'data'
-    select_(.dots = X) %>%
-    # Convert X_data to matrices
-    as.matrix()
+  # Select X variable data from 'data'
+  X_data <- select_(data, .dots = X)
+  # Convert X_data to matrices
+  X_data <- as.matrix(X_data)
+  # Add a column of ones to front
+  if(include_i) {X_data <- cbind(1, X_data)
+  colnames(X_data)[1] <- "ones"}
   
   # Calculate beta hat
   beta_hat <- solve(t(X_data) %*% X_data) %*% t(X_data) %*% y_data
   # Change the name of 'ones' to 'intercept'
-  rownames(beta_hat) <- c(X)
-  # Return beta_hat
-  return(beta_hat)
-}
+  if(include_i){
+      rownames(beta_hat) <- c("intercept", X)
+  }
+  else
+    rownames(beta_hat) <- c(X)
+
+  n <- nrow(X_data)
+  k <- ncol(X_data)
+  
+  dof <- n - k 
+  
+  #uncentered R2
+  e <- (diag(n) - X_data %*% solve(t(X_data) %*% X_data) %*% t(X_data)) %*% y_data
+  ruc_sq <- (1- ((t(e) %*% e)) / (t(y_data) %*% y_data))
+  
+  #centered R2
+  i <- rep(1, n)
+  A <- (diag(i) - (1/n)*(i) %*% t(i))
+  y_star = A %*% y_data
+  r_sq <- 1 - ( (t(e) %*% e) / (t(y_star) %*% y_star) )
+  
+  #Adjusted R2
+  adj_r2 <- 1 - (((n-1)/(n-k))*(1-r_sq))
+  
+  #AIC
+  aic <- log((t(e) %*% e)/n) + 2*(k/n)
+  
+  #SIC
+  sic <- log((t(e) %*% e)/n) + (k/n)*(log(n))
+
+  # s2
+  s2 <- (t(e) %*% e)/(n-k)
+  
+  #residuals
+  # res <- 
+  
+  reg_list <- c("Beta_hat" = beta_hat, "n" = n, "dof" = dof, "ruc_sq" = ruc_sq, "r_sq" = r_sq, "Adj_R2" = adj_r2, "AIC" = aic, "SIC" = sic, "s2" = s2)
+  
+  return(reg_list)
+  
+  }
 
 # Regress CO2pc on GDPpc without an intercept
-b_ols1(data=wdi_data, y="CO2pc", X="GDPpc")
+b_ols(data=wdi_data, y="CO2pc", X="GDPpc", include_i = FALSE)
 ```
 
-    ##              CO2pc
-    ## GDPpc 2.233062e-07
+    ##      Beta_hat             n           dof        ruc_sq          r_sq 
+    ##  2.233062e-07  1.940000e+02  1.930000e+02  4.904832e-01  1.895649e-01 
+    ##        Adj_R2           AIC           SIC            s2 
+    ##  1.895649e-01 -1.032573e+01 -1.030888e+01  3.261076e-05
 
 ###### Write down your regression coefficient.
 
@@ -201,11 +242,13 @@ Now multiply CO2pc by 1000, changing its units to tons instead of kilotons. Run 
 wdi_data$CO2pc_tons <- wdi_data$CO2pc*1000 #Change units of per capita CO2 conc to tons
 
 # Rerun regression
-b_ols1(data=wdi_data, y="CO2pc_tons", X="GDPpc")
+b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc", include_i = FALSE)
 ```
 
-    ##         CO2pc_tons
-    ## GDPpc 0.0002233062
+    ##     Beta_hat            n          dof       ruc_sq         r_sq 
+    ## 2.233062e-04 1.940000e+02 1.930000e+02 4.904832e-01 1.895649e-01 
+    ##       Adj_R2          AIC          SIC           s2 
+    ## 1.895649e-01 3.489784e+00 3.506628e+00 3.261076e+01
 
 ###### What has happened to the coefficient on GDPpc?
 
@@ -216,11 +259,13 @@ Now divide GDPpc by 1000, changing its units to thousands of $ instead of $. Run
 ``` r
 wdi_data$GDPpc_thous <- wdi_data$GDPpc*(1/1000)
 
-b_ols1(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous")
+b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous", include_i = FALSE)
 ```
 
-    ##             CO2pc_tons
-    ## GDPpc_thous  0.2233062
+    ##    Beta_hat           n         dof      ruc_sq        r_sq      Adj_R2 
+    ##   0.2233062 194.0000000 193.0000000   0.4904832   0.1895649   0.1895649 
+    ##         AIC         SIC          s2 
+    ##   3.4897836   3.5066283  32.6107610
 
 ###### What has happened to the coefficient on GDPpc? (Optional: Calculate the R2 for each regression and see what happens. Any changes? What happens to the sums of squares?) Keep both variables in the new units.
 
@@ -229,56 +274,58 @@ b_ols1(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous")
 ##### 15. For the last regression from the previous part calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2.
 
 ``` r
-sample_size <- function(data) {
-  
-  #some stuff
-  n <- count(data)
-  return(n)
-}
-
-deg_freedom <- function(data) {
-  n <- count(data)
-  df <- n - count(x)
-}
-
-# b?
-# 
-# rsq_uc <- function() {}
-# 
-# rsq <- function() {}
-# 
-# adj_rsq <- function() {}
-# 
-# akaikeIC <- function() {}
-#   
-# bsIC <- function() {}
-# 
-# std_error <- function() {}
-# 
-# pred_vals <- 
-
-
-count(wdi_data)
+b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous", include_i = FALSE)
 ```
 
-    ## # A tibble: 1 x 1
-    ##       n
-    ##   <int>
-    ## 1   194
+    ##    Beta_hat           n         dof      ruc_sq        r_sq      Adj_R2 
+    ##   0.2233062 194.0000000 193.0000000   0.4904832   0.1895649   0.1895649 
+    ##         AIC         SIC          s2 
+    ##   3.4897836   3.5066283  32.6107610
 
 Then calculate the predicted values and plot them against the actual CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs, but briefly talk about what these figures tell you about fit and the validity of the constant variance assumption. Also - are there any outliers?
+
+``` r
+# calculate the predicted values and plot them against the actual CO2pc. Calculate your residuals and plot them against GDPpc
+# plot
+```
+
+*what these figures tell you about fit and the validity of the constant variance assumption. Also - are there any outliers?*
 
 ##### 16. Regress CO2pc on GDPpc and an intercept.
 
 Calculate and report n, df = n − k, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Then calculate the predicted values and plot them against CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs. Use the pictures and results to talk about how the fit has improved or not.
 
+*HAS the fit improved??*
+
 ##### 17. Regress CO2pc on an intercept, GDPpc and GDPpc2, where GDPpc2 is the square of GNIpc.
 
 Calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Then calculate the predicted values and plot them against CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs. Use the pictures and results to talk about how the fit has improved or not. Also briefly address whether including GDPpc2 in the regression is violates any of our assumptions. Does this specification make economic sense?
 
+``` r
+wdi_data$GDPpc2 <- wdi_data$GDPpc^2
+
+b_ols(data=wdi_data, y="CO2pc", X=c("GDPpc", "GDPpc2") , include_i = FALSE)
+```
+
+    ##     Beta_hat1     Beta_hat2             n           dof        ruc_sq 
+    ##  4.516723e-07 -3.196772e-12  1.940000e+02  1.920000e+02  6.459354e-01 
+    ##          r_sq        Adj_R2           AIC           SIC            s2 
+    ##  4.368266e-01  4.338934e-01 -1.067940e+01 -1.064571e+01  2.277933e-05
+
+``` r
+# Calculate RESIDUALS
+# plot()
+```
+
+*Does not violate our assumptions, but is hard to interpret*
+
 ##### 18. The power of FWT.
 
 Calculate demeaned versions of CO2pc, GDPpc and GDPpc2. Regress the demeaned CO2pc on the demeaned GDPpc and GDPpc2. Compare your parameter estimates to the result from the previous part.
+
+``` r
+#see notes from stata
+```
 
 ##### 19. More power of FWT.
 
