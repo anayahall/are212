@@ -363,7 +363,7 @@ Calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Th
 
 wdi_data$GDPpc2 <- (wdi_data$GDPpc_thous)^(2)
 
-b_ols(data=wdi_data, y="CO2pc", X=c("GDPpc_thous", "GDPpc2"), include_i = TRUE)
+b_ols(data=wdi_data, y="CO2pc_tons", X=c("GDPpc_thous", "GDPpc2"), include_i = TRUE)
 
 ```
 
@@ -408,27 +408,30 @@ b_ols(data=wdi_data, y="CO2pcdev", X=c("GDPpcdev", "GDPpc2dev"), include_i = FAL
 ```{r}
 
 # Regress CO2pc on GDPpc. Save your residuals
-b_ols(data=wdi_data, y="CO2pc", X="GDPpc", include_i = FALSE)
+b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous", include_i = FALSE)
 co2_star <- res
 
 # Now regress the columns of [i GDPpc2] on GDPpc. Save your residuals (an n × 2 matrix of residuals).
 wdi_data$i <- rep(1, 194)
-b_ols(data=wdi_data, y="i", X="GDPpc", include_i=FALSE)
+b_ols(data=wdi_data, y="i", X="GDPpc_thous", include_i=FALSE)
 i_star <- res
 
-b_ols(data=wdi_data, y="GDPpc2", X="GDPpc", include_i=FALSE)
+b_ols(data=wdi_data, y="GDPpc2", X="GDPpc_thous", include_i=FALSE)
 gdp_star <- res
 
 new_data <- as.data.frame(cbind(co2_star, i_star, gdp_star))
 colnames(new_data) <- c("co2_star", "i_star", "gdp_star")
 
+```
+
+```{r}
 # Now regress the first vector of n residuals on the (n × 2) matrix of residuals
-# b_ols(data=new_data, y="co2_star", X=c("i_star", "gdp_star"), include_i = TRUE)
+# b_ols(data=new_data, y="co2_star", X=c("i_star", "gdp_star"), include_i = FALSE)
 
 ```
-*Uh oh! The final regression generates an error!! R is telling me that I have linearly dependent columns, i.e. strongly correlated variables, and cannot invert the matrix*
-
-
-
+    Beta_hat1  | Beta_hat2   |          n    |       dof    |    ruc_sq    |      r_sq    |   Adj_R2  |
+   1.01533420   | -0.00280706 | 194.00000000 |  192.00000000  |  0.32243570  |  0.25247946  |  0.24858612 |
+   
+*Aha! I get the same results as the regression in question 17! (this works when I run the code in R, but for some reason not when I knit.... so I've copied the results here!*
 
 

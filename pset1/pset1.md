@@ -336,15 +336,15 @@ Calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Th
 ``` r
 wdi_data$GDPpc2 <- (wdi_data$GDPpc_thous)^(2)
 
-b_ols(data=wdi_data, y="CO2pc", X=c("GDPpc_thous", "GDPpc2"), include_i = TRUE)
+b_ols(data=wdi_data, y="CO2pc_tons", X=c("GDPpc_thous", "GDPpc2"), include_i = TRUE)
 ```
 
     ##     Beta_hat1     Beta_hat2     Beta_hat3             n           dof 
-    ##  1.015334e-03  4.011828e-04 -2.807060e-06  1.940000e+02  1.910000e+02 
+    ##    1.01533420    0.40118282   -0.00280706  194.00000000  191.00000000 
     ##        ruc_sq          r_sq        Adj_R2           AIC           SIC 
-    ##  6.547696e-01  4.508781e-01  4.451282e-01 -1.069436e+01 -1.064383e+01 
+    ##    0.65476959    0.45087813    0.44512816    3.12115137    3.17168526 
     ##            s2           SST 
-    ##  2.232726e-05  7.766047e-03
+    ##   22.32725807 7766.04707579
 
 *Adding a squared term for GDPpc does seem to increase the measure of fit of our regression. This does not violate our assumptions, but it does make the result harder to interpret from an economic and real-world sense. How can you hold GDP-squared constant without holding GDP constant?!*
 
@@ -380,35 +380,35 @@ Report your findings.
 
 ``` r
 # Regress CO2pc on GDPpc. Save your residuals
-b_ols(data=wdi_data, y="CO2pc", X="GDPpc", include_i = FALSE)
+b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous", include_i = FALSE)
 ```
 
-    ##      Beta_hat             n           dof        ruc_sq          r_sq 
-    ##  2.233062e-07  1.940000e+02  1.930000e+02  4.904832e-01  5.370087e-01 
-    ##        Adj_R2           AIC           SIC            s2           SST 
-    ##  5.370087e-01 -1.032573e+01 -1.030888e+01  3.261076e-05  7.766047e-03
+    ##     Beta_hat            n          dof       ruc_sq         r_sq 
+    ##    0.2233062  194.0000000  193.0000000    0.4904832    0.5370087 
+    ##       Adj_R2          AIC          SIC           s2          SST 
+    ##    0.5370087    3.4897836    3.5066283   32.6107610 7766.0470758
 
 ``` r
 co2_star <- res
 
 # Now regress the columns of [i GDPpc2] on GDPpc. Save your residuals (an n × 2 matrix of residuals).
 wdi_data$i <- rep(1, 194)
-b_ols(data=wdi_data, y="i", X="GDPpc", include_i=FALSE)
+b_ols(data=wdi_data, y="i", X="GDPpc_thous", include_i=FALSE)
 ```
 
     ##      Beta_hat             n           dof        ruc_sq          r_sq 
-    ##  2.230778e-05  1.940000e+02  1.930000e+02  3.116687e-01  7.236744e+28 
+    ##  2.230778e-02  1.940000e+02  1.930000e+02  3.116687e-01  7.236744e+28 
     ##        Adj_R2           AIC           SIC            s2           SST 
     ##  7.236744e+28 -3.631758e-01 -3.463311e-01  6.918978e-01  5.751078e-28
 
 ``` r
 i_star <- res
 
-b_ols(data=wdi_data, y="GDPpc2", X="GDPpc", include_i=FALSE)
+b_ols(data=wdi_data, y="GDPpc2", X="GDPpc_thous", include_i=FALSE)
 ```
 
     ##     Beta_hat            n          dof       ruc_sq         r_sq 
-    ## 7.143648e+04 1.940000e+02 1.930000e+02 7.674316e-01 5.831731e-01 
+    ## 7.143648e+07 1.940000e+02 1.930000e+02 7.674316e-01 5.831731e-01 
     ##       Adj_R2          AIC          SIC           s2          SST 
     ## 5.831731e-01 4.142491e+01 4.144175e+01 9.735901e+17 7.318506e+20
 
@@ -417,9 +417,15 @@ gdp_star <- res
 
 new_data <- as.data.frame(cbind(co2_star, i_star, gdp_star))
 colnames(new_data) <- c("co2_star", "i_star", "gdp_star")
-
-# Now regress the first vector of n residuals on the (n × 2) matrix of residuals
-# b_ols(data=new_data, y="co2_star", X=c("i_star", "gdp_star"), include_i = TRUE)
 ```
 
-*Uh oh! The final regression generates an error!! R is telling me that I have linearly dependent columns, i.e. strongly correlated variables, and cannot invert the matrix*
+``` r
+# Now regress the first vector of n residuals on the (n × 2) matrix of residuals
+# b_ols(data=new_data, y="co2_star", X=c("i_star", "gdp_star"), include_i = FALSE)
+```
+
+    Beta_hat1  | Beta_hat2   |          n    |       dof    |    ruc_sq    |      r_sq    |   Adj_R2  |
+
+1.01533420 | -0.00280706 | 194.00000000 | 192.00000000 | 0.32243570 | 0.25247946 | 0.24858612 |
+
+*Aha! I get the same results as the regression in question 17! (this works when I run the code in R, but for some reason not when I knit.... so I've copied the results here!*
