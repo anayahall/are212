@@ -334,18 +334,17 @@ b_ols(data=wdi_data, y="CO2pc_tons", X="GDPpc_thous", include_i = TRUE)
 Calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Then calculate the predicted values and plot them against CO2pc. Calculate your residuals and plot them against GDPpc. Do not submit the graphs. Use the pictures and results to talk about how the fit has improved or not. Also briefly address whether including GDPpc2 in the regression is violates any of our assumptions. Does this specification make economic sense?
 
 ``` r
-wdi_data$GDPpc2 <- (wdi_data$GDPpc)^(2)
+wdi_data$GDPpc2 <- (wdi_data$GDPpc_thous)^(2)
 
-# This should be running with include_i = TRUE, but is breaking if I do it that way....
-b_ols(data=wdi_data, y="CO2pc", X=c("GDPpc", "GDPpc2"), include_i = FALSE)
+b_ols(data=wdi_data, y="CO2pc", X=c("GDPpc_thous", "GDPpc2"), include_i = TRUE)
 ```
 
-    ##     Beta_hat1     Beta_hat2             n           dof        ruc_sq 
-    ##  4.516723e-07 -3.196772e-12  1.940000e+02  1.920000e+02  6.459354e-01 
-    ##          r_sq        Adj_R2           AIC           SIC            s2 
-    ##  5.637424e-01  5.614702e-01 -1.067940e+01 -1.064571e+01  2.277933e-05 
-    ##           SST 
-    ##  7.766047e-03
+    ##     Beta_hat1     Beta_hat2     Beta_hat3             n           dof 
+    ##  1.015334e-03  4.011828e-04 -2.807060e-06  1.940000e+02  1.910000e+02 
+    ##        ruc_sq          r_sq        Adj_R2           AIC           SIC 
+    ##  6.547696e-01  4.508781e-01  4.451282e-01 -1.069436e+01 -1.064383e+01 
+    ##            s2           SST 
+    ##  2.232726e-05  7.766047e-03
 
 *Adding a squared term for GDPpc does seem to increase the measure of fit of our regression. This does not violate our assumptions, but it does make the result harder to interpret from an economic and real-world sense. How can you hold GDP-squared constant without holding GDP constant?!*
 

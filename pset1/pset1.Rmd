@@ -361,10 +361,9 @@ Calculate and report n, degrees of freedom, b, Ru2c, R2, R ̄2, AIC, SIC, s2. Th
 
 ```{r}
 
-wdi_data$GDPpc2 <- (wdi_data$GDPpc)^(2)
+wdi_data$GDPpc2 <- (wdi_data$GDPpc_thous)^(2)
 
-# This should be running with include_i = TRUE, but is breaking if I do it that way....
-b_ols(data=wdi_data, y="CO2pc", X=c("GDPpc", "GDPpc2"), include_i = FALSE)
+b_ols(data=wdi_data, y="CO2pc", X=c("GDPpc_thous", "GDPpc2"), include_i = TRUE)
 
 ```
 
