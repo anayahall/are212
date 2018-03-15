@@ -10,124 +10,13 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(readr)
 library(magrittr)
+library(pacman)
+p_load(dplyr, lfe, magrittr, readr, ggplot2)
 ```
 
 # Question One: “Linkages among climate change, crop yields and Mexico - US cross-border migration"
 
 Load OLS functions
-
-```{r OLD OLS function, include=FALSE}
-ols <- function(data, y_data, X_data, intercept = T, H0 = 0, two_tail = T, alpha = 0.05) {
-  # Function setup ----
-    # Require the 'dplyr' package
-    require(dplyr)
-    # Function to convert tibble, data.frame, or tbl_df to matrix
-    to_matrix <- function(the_df, vars) {
-      # Create a matrix from variables in var
-      new_mat <- the_df %>%
-        #Select the columns given in 'vars'
-        select_(.dots = vars) %>%
-        # Convert to matrix
-        as.matrix()
-      # Return 'new_mat'
-      return(new_mat)
-    }
-  
-  # Create dependent and independent variable matrices ----
-    # y matrix
-    y <- to_matrix (the_df = data, vars = y_data)
-    # X matrix
-    X <- to_matrix (the_df = data, vars = X_data)
-      # If 'intercept' is TRUE, then add a column of ones
-      if (intercept == T) {
-      X <- cbind(1,X)
-      colnames(X) <- c("intercept", X_data)
-      }
- 
-  # Calculate b, y_hat, and residuals ----
-    b <- solve(t(X) %*% X) %*% t(X) %*% y
-    y_hat <- X %*% b
-    e <- y - y_hat
-  
-  # Useful -----
-    n <- nrow(X) # number of observations
-    k <- ncol(X) # number of independent variables
-    dof <- n - k # degrees of freedom
-    i <- rep(1,n) # column of ones for demeaning matrix
-    A <- diag(i) - (1 / n) * i %*% t(i) # demeaning matrix
-    y_star <- A %*% y # for SST
-    X_star <- A %*% X # for SSM
-    SST <- drop(t(y_star) %*% y_star)
-    SSM <- drop(t(b) %*% t(X_star) %*% X_star %*% b)
-    SSR <- drop(t(e) %*% e)
-  
-  # Measures of fit and estimated variance ----
-    R2uc <- drop((t(y_hat) %*% y_hat)/(t(y) %*% y)) # Uncentered R^2
-    R2 <- 1 - SSR/SST # Uncentered R^2
-    R2adj <- 1 - (n-1)/dof * (1 - R2) # Adjusted R^2
-    AIC <- log(SSR/n) + 2*k/n # AIC
-    SIC <- log(SSR/n) + k/n*log(n) # SIC
-    s2 <- SSR/dof # s^2
-  
-  # Measures of fit table ----
-    mof_table_df <- data.frame(R2uc, R2, R2adj, SIC, AIC, SSR, s2)
-    mof_table_col_names <- c("$R^2_\\text{uc}$", "$R^2$",
-                             "$R^2_\\text{adj}$",
-                             "SIC", "AIC", "SSR", "$s^2$")
-    mof_table <-  mof_table_df %>% knitr::kable(
-      row.names = F,
-      col.names = mof_table_col_names,
-      format.args = list(scientific = F, digits = 4),
-      booktabs = T,
-      escape = F
-    )
-  
-  # t-test----
-    # Standard error
-    se <- as.vector(sqrt(s2 * diag(solve(t(X) %*% X))))
-    # Vector of _t_ statistics
-    t_stats <- (b - H0) / se
-    # Calculate the p-values
-    if (two_tail == T) {
-    p_values <- pt(q = abs(t_stats), df = dof, lower.tail = F) * 2
-    } else {
-      p_values <- pt(q = abs(t_stats), df = dof, lower.tail = F)
-    }
-    # Do we (fail to) reject?
-    reject <- ifelse(p_values < alpha, reject <- "Reject", reject <- "Fail to Reject")
-    
-    # Nice table (data.frame) of results
-    ttest_df <- data.frame(
-      # The rows have the coef. names
-      effect = rownames(b),
-      # Estimated coefficients
-      coef = as.vector(b) %>% round(3),
-      # Standard errors
-      std_error = as.vector(se) %>% round(3),
-      # t statistics
-      t_stat = as.vector(t_stats) %>% round(3),
-      # p-values
-      p_value = as.vector(p_values) %>% round(4),
-      # reject null?
-      significance = as.character(reject)
-      )
-  
-    ttest_table <-  ttest_df %>% knitr::kable(
-      booktabs = T,
-      format.args = list(scientific = F),
-      escape = F
-    )
-
-  # Data frame for exporting for y, y_hat, X, and e vectors ----
-    export_df <- data.frame(y, y_hat, e, X) %>% tbl_df()
-    colnames(export_df) <- c("y","y_hat","e",colnames(X))
-  
-  # Return ----
-    return(list(n=n, dof=dof, b=b, vars=export_df, R2uc=R2uc,R2=R2,
-                R2adj=R2adj, AIC=AIC, SIC=SIC, s2=s2, SST=SST, SSR=SSR,
-                mof_table=mof_table, ttest=ttest_table))
-}
-```
 
 ```{r OLS functions}
 # Function to turn given data into matrix for use in OLS function
@@ -173,7 +62,6 @@ b_ols <- function(data, y_data, X_data, intercept=TRUE) {
     dof <- n - k # degrees of freedom
     i <- rep(1,n) # column of ones for demeaning matrix
     A <- diag(i) - (1 / n) * i %*% t(i) # demeaning matrix
-    M <- diag(i) - (X) %*% 
     y_star <- A %*% y # for SST
     X_star <- A %*% X # for SSM
     SST <- drop(t(y_star) %*% y_star)
@@ -195,85 +83,174 @@ b_ols <- function(data, y_data, X_data, intercept=TRUE) {
       coef = as.vector(b) %>% round(3)
     )
 
-      # Return beta_hat & adjusted r2
-    #return(R2adj)
+    res <<- e
+    adjr2 <<- R2adj
+    
+    # Return beta_hat & adjusted r2
+    #print(paste("Adj R2: ", R2adj))
     return(results)
 }
 
 ```
 
-```{r auto_data, include=FALSE}
-#load test data
-auto <- read_csv("~/projects/are212/section/Section01/auto.csv")
+Load Data (cleaned and prepared in Excel)
+```{r load_data, echo=FALSE}
+feng_data <- read_csv("~/projects/are212/midterm/feng_data.csv")
 ```
 
-
-```{r}
-# check ols function
-b_ols(data = auto, y_data = "price", X_data = c("mpg", "headroom"))
-```
-
-
-Load & clean data
-
-```{r load_data}
-feng <- read_csv()
-
-
-
-```
 Inspect data
 ```{r}
-
+summary(feng_data)
 ```
+
 1. **Estimate model (1) via OLS by regressing emigration rate on log of yields and a time period fixed effect. Report coefficient on yield and adjusted $R^2$. Does this match the results in the first column of table #1?**
 
-```{r}
-b_ols(data = auto, y_data = "price", X_data = c("mpg", "headroom"))
+```{r cornols, echo=FALSE}
+b_ols(data = feng_data, y_data = "remi", X_data = c("cornyield", "y1995"))
+```
+Adjusted $R^2$: 0.321155954568775
+
+
+*These don't really match the results in the paper*
+
+```{r cornwheatols, echo=FALSE}
+b_ols(data = feng_data, y_data = "remi", X_data = c("cornwheatyield", "y1995"))
+```
+Adjusted $R^2$: 0.32147846639082"
+
+
+*These don't really match the results in the paper*
+
+2. **Estimate model (1) again via fixed effects and FWT. Report coefficient on yield and adjusted $R^2$. Does this match the results in the third column of table #1?**
+
+```{r resid_OLS}
+resid_ols <- function(data, y_var, X_vars, intercept = T) {
+  # Require the 'dplyr' package
+  require(dplyr)
+  # Create the y matrix
+  y <- to_matrix(the_df = data, vars = y_var)
+  # Create the X matrix
+  X <- to_matrix(the_df = data, vars = X_vars)
+  # If 'intercept' is TRUE, then add a column of ones
+  if (intercept == T) {
+    # Bind a column of ones to X
+    X <- cbind(1, X)
+    # Name the new column "intercept"
+    colnames(X) <- c("intercept", X_vars)
+  }
+  # Calculate the sample size, n
+  n <- nrow(X)
+  # Calculate the residuals
+  resids <- (diag(n) - X %*% solve(t(X) %*% X) %*% t(X)) %*% y
+  # Return 'resids'
+  return(resids)
+}
 ```
 
 
-2. Estimate model (1) again via fixed effects and FWT. Report coefficient on yield and adjusted $R^2$. Does this match the results in the third column of table #1?
+```{r FWT_corn}
+step1_resid <- resid_ols(feng_data, "remi", "cornyield", F)
 
-```{r FWT_pset1}
-
-#Step one: regress {per capita} CO$_2$ emissions on \textit{per capita} GDP and save the residuals.
-# Step 1 Residuals
-step1_resid <- resid_ols(wdi, "co2pc", "gdppc", F)
-
-
-#Step two: create a column of ones; then regress $[i\quad\mathbf{GDPpc2}]$ on $\mathbf{GDPpc}$.
-
-# Create a column of ones
-wdi %<>% mutate(ones = 1)
+feng_data %<>% mutate(ones = 1)
 # Our two regressions
-step2a_resid <- resid_ols(wdi, "ones", "gdppc", F)
-step2b_resid <- resid_ols(wdi, "gdppc2", "gdppc", F)
+step2a_resid <- resid_ols(feng_data, "ones", "cornyield", F)
+step2b_resid <- resid_ols(feng_data, "y1995", "cornyield", F)
 
-#Step three: build a dataset of residuals; regress the residuals from step one on the residuals from step two.
-# Build the dataset of residualized variables
-df19 <- data.frame(
-  co2pc_resid  = as.vector(step1_resid),
+
+df_fwt <- data.frame(
+  remi_resid  = as.vector(step1_resid),
   i_resid      = as.vector(step2a_resid),
-  gdppc2_resid = as.vector(step2b_resid)
+  fe_resid = as.vector(step2b_resid)
   ) %>% tbl_df()
 # The final regression
-b_ols(df19, "co2pc_resid", c("i_resid", "gdppc2_resid"), F)
+b_ols(df_fwt, "remi_resid", c("i_resid", "fe_resid"), F)
 
 ```
+Adjusted $R^2$: 0.5573145
+
+```{r FWT_cornwheat}
+step1_resid <- resid_ols(feng_data, "remi", "cornwheatyield", F)
+
+feng_data %<>% mutate(ones = 1)
+# Our two regressions
+step2a_resid <- resid_ols(feng_data, "ones", "cornwheatyield", F)
+step2b_resid <- resid_ols(feng_data, "y1995", "cornwheatyield", F)
 
 
-3. Repeat step 1 without the the fixed effects. Report coefficient on yield and adjusted $R^2$. Do the results look different from what you estimated before? From what is in the paper?
+df_fwt <- data.frame(
+  remi_resid  = as.vector(step1_resid),
+  i_resid      = as.vector(step2a_resid),
+  fe_resid = as.vector(step2b_resid)
+  ) %>% tbl_df()
+# The final regression
+b_ols(df_fwt, "remi_resid", c("i_resid", "fe_resid"), F)
 
-4. Repeat step 2 without the the fixed effects. Report coefficient on yield and adjusted $R^2$. Do the results look different from what you estimated before? From what is in the paper?
+```
+Adjusted $R^2$: 0.5556311
 
-5. What happened here? What are the consequences?
+*These both match the output from my first regressions, but they do not match the results in the paper*
+
+3. **Repeat step 1 without the the fixed effects. Report coefficient on yield and adjusted $R^2$. Do the results look different from what you estimated before? From what is in the paper?**
+
+```{r}
+b_ols(data = feng_data, y_data = "remi", X_data = c("cornyield"))
+
+```
+Adjusted $R^2$: -0.004523002
 
 
 ```{r}
-
+b_ols(data = feng_data, y_data = "remi", X_data = c("cornwheatyield"))
 
 ```
+Adjusted $R^2$: -0.002158803
+
+
+4. **Repeat step 2 without the the fixed effects. Report coefficient on yield and adjusted $R^2$. Do the results look different from what you estimated before? From what is in the paper?**
+
+```{r FWT_corn_nofe}
+step1_resid <- resid_ols(feng_data, "remi", "cornyield", F)
+
+feng_data %<>% mutate(ones = 1)
+# Our two regressions
+step2a_resid <- resid_ols(feng_data, "ones", "cornyield", F)
+
+
+df_fwt <- data.frame(
+  remi_resid  = as.vector(step1_resid),
+  i_resid      = as.vector(step2a_resid)
+  ) %>% tbl_df()
+# The final regression
+b_ols(df_fwt, "remi_resid", c("i_resid"), F)
+
+```
+Adjusted $R^2$:  0.3447634
+
+```{r FWT_cornwheat_nofe}
+step1_resid <- resid_ols(feng_data, "remi", "cornwheatyield", F)
+
+feng_data %<>% mutate(ones = 1)
+# Our two regressions
+step2a_resid <- resid_ols(feng_data, "ones", "cornwheatyield", F)
+
+df_fwt <- data.frame(
+  remi_resid  = as.vector(step1_resid),
+  i_resid      = as.vector(step2a_resid)
+  ) %>% tbl_df()
+# The final regression
+b_ols(df_fwt, "remi_resid", c("i_resid"), F)
+
+```
+
+Adjusted $R^2$: 0.3435078
+
+*The results still do not match the output...*
+
+
+
+5. **What happened here? What are the consequences?**
+
+*Our regressions here do not replicate the results from the Feng et al paper. Although we included period fixed effects, we did not control for any state-level fixed effects. This could be hugely influential on emigration ratio, considering that local policies and other cultural on-goings could be arguably more impactful on citizen's immigration choices. We therefore could be missing a lot of the explanatory power of emigration in Mexican states.*
 
 
 # Question Two: Normality of OLS
@@ -287,9 +264,45 @@ $\beta_0$ = 3 , $\beta_1$ = 1, $\beta_2$ = -2
 ###Load functions for use in simulation
 
 Generate data function (given a sample size, n)
-```{r gen_data function}
+```{r slimols}
 
-#ADD SWEEP TO FIX COVARIANCE OF X1 & X2
+# Skinny version of OLS function without all the measures of fit
+slim_ols <- function(data, y_data, X_data, intercept=TRUE) {
+
+  require(dplyr)  
+    # y matrix
+    y <- to_matrix (the_df = data, vars = y_data)
+    # X matrix
+    X <- to_matrix (the_df = data, vars = X_data)
+      # If 'intercept' is TRUE, then add a column of ones
+      if (intercept == T) {
+        X <- cbind(1,X)
+        colnames(X) <- c("intercept", X_data)
+      }
+
+    # Calculate beta hat ------
+    b <- solve( t(X) %*% X ) %*% t(X) %*% y
+    # Change the name of 'ones' to 'intercept'
+    if(intercept == T){
+        rownames(b) <- c("intercept", X_data) }
+    else
+        rownames(b) <- c(X_data)
+ 
+    results <- data.frame(
+      # The rows have the coef. names
+      x_var = rownames(b),
+      # Estimated coefficients
+      coef = as.vector(b) %>% round(3)
+    )
+    
+    return(results)   
+}
+
+```
+
+
+```{r gen_data function}
+#ADD SWEEP TO FIX COVARIANCE OF X1 & X2 (Should be 0, but isn't right now) 
 gen_data <- function(sample_size) {
   # Create data.frame with random x and error
   data_df <- data.frame(
@@ -300,22 +313,20 @@ gen_data <- function(sample_size) {
     eta = runif(sample_size, -8.66, 8.66))
   # Calculate y = 3 + 1 x1 - 2 x2 + e; drop 'e'
   data_df %<>% mutate(y_a = 3 + 1 * X1 - 2 * X2 + e, 
-                      y_b = 3 + 1 * X1 - 2 * X2 + eta) %>%
+                      y_b = 3 + 1 * X1 - 2 * X2 + eta) %>% #Populaton
     select(-e, -eta)
   # Return data_df
   return(data_df)
   
 }
 
- # test <- gen_data(10)
- # test
 ```
 
 Function for a single simulation of OLS
 ```{r one_sim function}
 one_sim <- function(sample_size, depvar) {
   # Estimate via OLS
-  ols_est <- b_ols(data = gen_data(sample_size),
+  ols_est <- slim_ols(data = gen_data(sample_size),
     y_data = depvar, X_data = c("X1", "X2"))
   # Grab the estimated coefficient on x
   # (the second element of 'coef')
@@ -329,6 +340,8 @@ one_sim <- function(sample_size, depvar) {
 Function for multiple simulations of OLS
 ```{r}
 ols_sim <- function(depvar, n_sims = 1e4, sample_size, seed = 22092008) {
+  # require parallel
+  require(parallel)
   # Set the seed
   set.seed(seed)
   # Run one_sim n_sims times; convert results to data.frame
@@ -337,6 +350,14 @@ ols_sim <- function(depvar, n_sims = 1e4, sample_size, seed = 22092008) {
     expr = one_sim(sample_size, depvar),
     simplify = F
     ) %>% bind_rows()
+  
+   # TRY TO PARALLELIZE TO SPEED UP! ---- get error with bind rows though...
+   # sim_df <- mclapply(
+   #  X = rep(x = sample_size, times = n_sims),
+   #  FUN = one_sim,
+   #  # Specify that we want 4 cores
+   #  mc.cores = 4
+   #  ) %>% bind_rows()
   # Return sim_df
   return(sim_df)
 }
@@ -345,38 +366,73 @@ ols_sim <- function(depvar, n_sims = 1e4, sample_size, seed = 22092008) {
 For each part, repeat for sample sizes: n=[10, 100, 1000, 10000, 20000] and run 1e4 simulations
 
 
-
-
 ###Part A: 
 Regress $y^a$ on intercept, $x_1$ and $x_2$. Record $\beta_2$ 
 ```{r ya_sims}
 N <- c(10, 100, 1000, 10000, 20000)
 
-for (n in N){
- print(n)
-  # sim_A <- matrix()
-  # sim10 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = n)
+# sim_A <- matrix("list", 5)
+# for (n in N){
+#   print(n)
+#   sim_A[[n]] <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = n)
+# 
+# }
 
-}
 # Run for sample sizes: n=[10, 100, 1000, 10000, 20000]
-# # Run ols_sim for sample size of 10
-# sim10 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 10)
-# # Run ols_sim for sample size of 100
-# sim100 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 100)
-# # Run ols_sim for sample size of 1000
-# sim1000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 1000)
+# Run ols_sim for sample size of 10
+sima10 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 10)
+# Run ols_sim for sample size of 100
+sima100 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 100)
+# Run ols_sim for sample size of 1000
+sima1000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 1000)
 # # Run ols_sim for sample size of 10000
-# sim10000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 10000)
+sima10000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 10000)
 # # Run ols_sim for sample size of 20000
-# sim20000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 20000)
+sima20000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 20000)
 
 ```
 
 Plot histogram
 
+```{r}
+pa1 <- ggplot(sima10, aes(x=b2)) + geom_density() + labs(title="10 Iterations")
+pa2 <- ggplot(sima100, aes(x=b2)) + geom_density() + labs(title="100 Iterations")
+pa3 <- ggplot(sima1000, aes(x=b2)) + geom_density() + labs(title="1000 Iterations")
+pa4 <- ggplot(sima10000, aes(x=b2)) + geom_density() + labs(title="10000 Iterations")
+pa5 <- ggplot(sima20000, aes(x=b2)) + geom_density() + labs(title="20000 Iterations")
+
+multiplot(pa1, pa2, pa3, pa4, pa5, cols= 3)
+```
+
+
 ###Part B:
 Regress $y^b$ on $x_1$ and $x_2$. Record $\beta_2$ 
 
-
+```{r}
+# Run for sample sizes: n=[10, 100, 1000, 10000, 20000]
+# Run ols_sim for sample size of 10
+simb10 <- ols_sim(depvar = "y_b", n_sims = 1e4, sample_size = 10)
+# Run ols_sim for sample size of 100
+simb100 <- ols_sim(depvar = "y_b", n_sims = 1e4, sample_size = 100)
+# # Run ols_sim for sample size of 1000
+simb1000 <- ols_sim(depvar = "y_b", n_sims = 1e4, sample_size = 1000)
+# # Run ols_sim for sample size of 10000
+simb10000 <- ols_sim(depvar = "y_b", n_sims = 1e4, sample_size = 10000)
+# # Run ols_sim for sample size of 20000
+simb20000 <- ols_sim(depvar = "y_b", n_sims = 1e4, sample_size = 20000)
+```
 
 Plot histogram
+
+``` {r}
+pb1 <- ggplot(simb10, aes(x=b2)) + geom_density() + labs(title="10 Iterations")
+pb2 <- ggplot(simb100, aes(x=b2)) + geom_density() + labs(title="100 Iterations")
+pb3 <- ggplot(simb1000, aes(x=b2)) + geom_density() + labs(title="1000 Iterations")
+pb4 <- ggplot(simb10000, aes(x=b2)) + geom_density() + labs(title="10000 Iterations")
+pb5 <- ggplot(simb20000, aes(x=b2)) + geom_density() + labs(title="20000 Iterations")
+
+multiplot(pb1, pb2, pb3, pb4, pb5, cols= 3)
+
+```
+
+**Thanks to Ed for providing A LOT of this code in section!**
