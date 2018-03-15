@@ -8,13 +8,15 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
+library(readr)
+library(magrittr)
 ```
 
 # Question One: “Linkages among climate change, crop yields and Mexico - US cross-border migration"
 
 Load OLS functions
 
-```{r OLS function, include=FALSE}
+```{r OLD OLS function, include=FALSE}
 ols <- function(data, y_data, X_data, intercept = T, H0 = 0, two_tail = T, alpha = 0.05) {
   # Function setup ----
     # Require the 'dplyr' package
@@ -127,7 +129,7 @@ ols <- function(data, y_data, X_data, intercept = T, H0 = 0, two_tail = T, alpha
 }
 ```
 
-```{r}
+```{r OLS functions}
 # Function to turn given data into matrix for use in OLS function
 to_matrix <- function(the_df, vars) {
   # Create a matrix from variables in var
@@ -171,6 +173,7 @@ b_ols <- function(data, y_data, X_data, intercept=TRUE) {
     dof <- n - k # degrees of freedom
     i <- rep(1,n) # column of ones for demeaning matrix
     A <- diag(i) - (1 / n) * i %*% t(i) # demeaning matrix
+    M <- diag(i) - (X) %*% 
     y_star <- A %*% y # for SST
     X_star <- A %*% X # for SSM
     SST <- drop(t(y_star) %*% y_star)
@@ -201,21 +204,64 @@ b_ols <- function(data, y_data, X_data, intercept=TRUE) {
 
 ```{r auto_data, include=FALSE}
 #load test data
-library(readr)
 auto <- read_csv("~/projects/are212/section/Section01/auto.csv")
 ```
 
 
 ```{r}
+# check ols function
 b_ols(data = auto, y_data = "price", X_data = c("mpg", "headroom"))
 ```
 
 
 Load & clean data
 
-1. Estimate model (1) via OLS by regressing emigration rate on log of yields and a time period fixed effect.Report coefficient on yield and adjusted $R^2$. Does this match the results in the first column of table #1?
+```{r load_data}
+feng <- read_csv()
+
+
+
+```
+Inspect data
+```{r}
+
+```
+1. **Estimate model (1) via OLS by regressing emigration rate on log of yields and a time period fixed effect. Report coefficient on yield and adjusted $R^2$. Does this match the results in the first column of table #1?**
+
+```{r}
+b_ols(data = auto, y_data = "price", X_data = c("mpg", "headroom"))
+```
+
 
 2. Estimate model (1) again via fixed effects and FWT. Report coefficient on yield and adjusted $R^2$. Does this match the results in the third column of table #1?
+
+```{r FWT_pset1}
+
+#Step one: regress {per capita} CO$_2$ emissions on \textit{per capita} GDP and save the residuals.
+# Step 1 Residuals
+step1_resid <- resid_ols(wdi, "co2pc", "gdppc", F)
+
+
+#Step two: create a column of ones; then regress $[i\quad\mathbf{GDPpc2}]$ on $\mathbf{GDPpc}$.
+
+# Create a column of ones
+wdi %<>% mutate(ones = 1)
+# Our two regressions
+step2a_resid <- resid_ols(wdi, "ones", "gdppc", F)
+step2b_resid <- resid_ols(wdi, "gdppc2", "gdppc", F)
+
+#Step three: build a dataset of residuals; regress the residuals from step one on the residuals from step two.
+# Build the dataset of residualized variables
+df19 <- data.frame(
+  co2pc_resid  = as.vector(step1_resid),
+  i_resid      = as.vector(step2a_resid),
+  gdppc2_resid = as.vector(step2b_resid)
+  ) %>% tbl_df()
+# The final regression
+b_ols(df19, "co2pc_resid", c("i_resid", "gdppc2_resid"), F)
+
+```
+
 
 3. Repeat step 1 without the the fixed effects. Report coefficient on yield and adjusted $R^2$. Do the results look different from what you estimated before? From what is in the paper?
 
@@ -229,6 +275,7 @@ Load & clean data
 
 ```
 
+
 # Question Two: Normality of OLS
 
 Model:
@@ -237,39 +284,99 @@ $y_i$ = $\beta_o$ + $\beta_1$$x_{1i}$ + $\beta_2$$x_{2i}$ + $\epsilon_i$
 Truth:
 $\beta_0$ = 3 , $\beta_1$ = 1, $\beta_2$ = -2
 
-
 ###Load functions for use in simulation
 
 Generate data function (given a sample size, n)
 ```{r gen_data function}
 
+#ADD SWEEP TO FIX COVARIANCE OF X1 & X2
 gen_data <- function(sample_size) {
   # Create data.frame with random x and error
   data_df <- data.frame(
-    x1 = rnorm(sample_size),
-    x2 = rnorm(sample_size),
-    e = rnorm(sample_size))
+    X1 = rnorm(n = sample_size, sd = 5),
+    X2 = rnorm(n = sample_size, sd = 5),
+    # X <- rnorm(n = sample_size, sd =5) %>% matrix(sample_size, 2),
+    e = rnorm(sample_size, sd = 5),
+    eta = runif(sample_size, -8.66, 8.66))
   # Calculate y = 3 + 1 x1 - 2 x2 + e; drop 'e'
-  data_df %<>% mutate(y = 3 + 1 * x1 - 2 * x2 + e) %>%
-    select(-e)
+  data_df %<>% mutate(y_a = 3 + 1 * X1 - 2 * X2 + e, 
+                      y_b = 3 + 1 * X1 - 2 * X2 + eta) %>%
+    select(-e, -eta)
   # Return data_df
   return(data_df)
   
 }
+
+ # test <- gen_data(10)
+ # test
 ```
 
-Run a single simulation of OLS
+Function for a single simulation of OLS
 ```{r one_sim function}
-one_sim <- function(sample_size) {
+one_sim <- function(sample_size, depvar) {
   # Estimate via OLS
-  ols_est <- ols(data = gen_data(sample_size),
-    y_data = "y", X_data = c("x1", "x2"))
+  ols_est <- b_ols(data = gen_data(sample_size),
+    y_data = depvar, X_data = c("X1", "X2"))
   # Grab the estimated coefficient on x
   # (the second element of 'coef')
   b2 <- ols_est %$% coef[3]
-  # Grab the second p-value
-  # (the first p-value is for the intercept)
-  # Return a data.frame with b1 and p_value
-  return(data.frame(b1, p_value))
+  # Return a data.frame with b2
+  return(data.frame(b2))
 }
 ```
+
+
+Function for multiple simulations of OLS
+```{r}
+ols_sim <- function(depvar, n_sims = 1e4, sample_size, seed = 22092008) {
+  # Set the seed
+  set.seed(seed)
+  # Run one_sim n_sims times; convert results to data.frame
+  sim_df <- replicate(
+    n = n_sims,
+    expr = one_sim(sample_size, depvar),
+    simplify = F
+    ) %>% bind_rows()
+  # Return sim_df
+  return(sim_df)
+}
+```
+
+For each part, repeat for sample sizes: n=[10, 100, 1000, 10000, 20000] and run 1e4 simulations
+
+
+
+
+###Part A: 
+Regress $y^a$ on intercept, $x_1$ and $x_2$. Record $\beta_2$ 
+```{r ya_sims}
+N <- c(10, 100, 1000, 10000, 20000)
+
+for (n in N){
+ print(n)
+  # sim_A <- matrix()
+  # sim10 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = n)
+
+}
+# Run for sample sizes: n=[10, 100, 1000, 10000, 20000]
+# # Run ols_sim for sample size of 10
+# sim10 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 10)
+# # Run ols_sim for sample size of 100
+# sim100 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 100)
+# # Run ols_sim for sample size of 1000
+# sim1000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 1000)
+# # Run ols_sim for sample size of 10000
+# sim10000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 10000)
+# # Run ols_sim for sample size of 20000
+# sim20000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 20000)
+
+```
+
+Plot histogram
+
+###Part B:
+Regress $y^b$ on $x_1$ and $x_2$. Record $\beta_2$ 
+
+
+
+Plot histogram
