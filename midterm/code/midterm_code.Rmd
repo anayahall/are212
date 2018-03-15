@@ -10,10 +10,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 ```
 
-# Question One: Replicate an important paper
-## “Linkages among climate change, crop yields and Mexico - US cross-border migration"
+# Question One: “Linkages among climate change, crop yields and Mexico - US cross-border migration"
 
-Load OLS function
+Load OLS functions
 
 ```{r OLS function, include=FALSE}
 ols <- function(data, y_data, X_data, intercept = T, H0 = 0, two_tail = T, alpha = 0.05) {
@@ -200,9 +199,14 @@ b_ols <- function(data, y_data, X_data, intercept=TRUE) {
 
 ```
 
+```{r auto_data, include=FALSE}
+#load test data
+library(readr)
+auto <- read_csv("~/projects/are212/section/Section01/auto.csv")
+```
+
 
 ```{r}
-
 b_ols(data = auto, y_data = "price", X_data = c("mpg", "headroom"))
 ```
 
