@@ -1,0 +1,124 @@
+---
+title: "Section04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+b_ols <- function(data, y_var, X_vars, intercept = TRUE) {
+  # Require the 'dplyr' package
+  require(dplyr)
+
+  # Create the y matrix
+  y <- data %>%
+    # Select y variable data from 'data'
+    select_(.dots = y_var) %>%
+    # Convert y_data to matrices
+    as.matrix()
+
+  # Create the X matrix
+  X <- data %>%
+    # Select X variable data from 'data'
+    select_(.dots = X_vars)
+
+  # If 'intercept' is TRUE, then add a column of ones
+  # and move the column of ones to the front of the matrix
+  if (intercept == T) {
+    # Bind on a column of ones
+    X <- cbind(1, X)
+    # Name the column of ones
+    names(X) <- c("ones", X_vars)
+    }
+
+  # Convert X_data to a matrix
+  X <- as.matrix(X)
+
+  # Calculate beta hat
+  beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
+
+  # If 'intercept' is TRUE:
+  # change the name of 'ones' to 'intercept'
+  if (intercept == T) rownames(beta_hat) <- c("intercept", X_vars)
+
+  # Return beta_hat
+  return(beta_hat)
+}
+
+```
+
+```{r cars}
+# Load the 'dplyr' package
+library(dplyr)
+# Set the seed
+set.seed(12345)
+# Set the sample size
+n <- 100
+# Generate the x and error data from N(0,1)
+the_data <- tibble(
+  x = rnorm(n),
+  e = rnorm(n))
+# Calculate y = 3 + 1.5 x + e
+the_data <- mutate(the_data, y = 3 + 1.5 * x + e)
+# Plot to make sure things are going well.
+plot(
+  # The variables for the plotw
+  x = the_data$x, y = the_data$y,
+  # Labels and title
+  xlab = "x", ylab = "y", main = "Our generated data")
+```
+
+
+```{r}
+
+b_ols(data = the_data, y_var = "y", X_vars = "x", intercept = F)
+
+library(lfe)
+# With an intercept:
+felm(y ~ x, data = the_data) %>% summary()
+
+# Without an intercept:
+felm(y ~ x - 1, data = the_data) %>% summary()
+
+```
+
+```{r}
+# The estimates
+b_w <- b_ols(data = the_data, y_var = "y", X_vars = "x", intercept = T)
+b_wo <- b_ols(data = the_data, y_var = "y", X_vars = "x", intercept = F)
+# Plot the points
+plot(
+  # The variables for the plot
+  x = the_data$x, y = the_data$y,
+  # Labels and title
+  xlab = "x", ylab = "y", main = "Our generated data")
+# Plot the line from the 'with intercept' regression in yellow
+abline(a = b_w[1], b = b_w[2], col = "lightblue", lwd = 3)
+# Plot the line from the 'without intercept' regression in purple
+abline(a = 0, b = b_w[1], col = "purple4", lwd = 2)
+# Add a legend
+legend(x = min(the_data$x), y = max(the_data$y),
+  legend = c("with intercept", "w/o intercept"),
+  # Line widths
+  lwd = c(3, 2),
+  # Colors
+  col = c("lightblue", "purple4"),
+  # No box around the legend
+  bty = "n")
+
+
+
+
+```
+
+
+
+#CANNED REGRESSIONS
+
+y ~ x
+y ~ x + I(x^2)    #how to get a squared term
+y ~ x:z   #just gives xz
+y ~ x*z   #gives you x, z and xz
+
