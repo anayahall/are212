@@ -392,23 +392,29 @@ sima20000 <- ols_sim(depvar = "y_a", n_sims = 1e4, sample_size = 20000)
 
 ```
 
-Plot histogram
+Plot histograms
 
+```{r a_plots}
+ggplot(sima10, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="10 Iterations") 
+```
 ```{r}
-pa1 <- ggplot(sima10, aes(x=b2)) + geom_density() + labs(title="10 Iterations")
-pa2 <- ggplot(sima100, aes(x=b2)) + geom_density() + labs(title="100 Iterations")
-pa3 <- ggplot(sima1000, aes(x=b2)) + geom_density() + labs(title="1000 Iterations")
-pa4 <- ggplot(sima10000, aes(x=b2)) + geom_density() + labs(title="10000 Iterations")
-pa5 <- ggplot(sima20000, aes(x=b2)) + geom_density() + labs(title="20000 Iterations")
-
-multiplot(pa1, pa2, pa3, pa4, pa5, cols= 3)
+ggplot(sima100, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="100 Iterations")
+```
+```{r}
+ggplot(sima1000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="1000 Iterations")
+```
+```{r}
+ggplot(sima10000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="10000 Iterations")
+```
+```{r}
+ggplot(sima20000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="20000 Iterations")
 ```
 
 
 ###Part B:
 Regress $y^b$ on $x_1$ and $x_2$. Record $\beta_2$ 
 
-```{r}
+```{r yb_sims}
 # Run for sample sizes: n=[10, 100, 1000, 10000, 20000]
 # Run ols_sim for sample size of 10
 simb10 <- ols_sim(depvar = "y_b", n_sims = 1e4, sample_size = 10)
@@ -425,13 +431,19 @@ simb20000 <- ols_sim(depvar = "y_b", n_sims = 1e4, sample_size = 20000)
 Plot histogram
 
 ``` {r}
-pb1 <- ggplot(simb10, aes(x=b2)) + geom_density() + labs(title="10 Iterations")
-pb2 <- ggplot(simb100, aes(x=b2)) + geom_density() + labs(title="100 Iterations")
-pb3 <- ggplot(simb1000, aes(x=b2)) + geom_density() + labs(title="1000 Iterations")
-pb4 <- ggplot(simb10000, aes(x=b2)) + geom_density() + labs(title="10000 Iterations")
-pb5 <- ggplot(simb20000, aes(x=b2)) + geom_density() + labs(title="20000 Iterations")
-
-multiplot(pb1, pb2, pb3, pb4, pb5, cols= 3)
+ggplot(simb10, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="10 Iterations")
+```
+```{r}
+ggplot(simb100, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="100 Iterations")
+```
+```{r}
+ggplot(simb1000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="1000 Iterations")
+```
+```{r}
+ggplot(simb10000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="10000 Iterations")
+```
+```{r}
+ggplot(simb20000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="20000 Iterations")
 
 ```
 
