@@ -1,0 +1,595 @@
+---
+title: 'Problem Set #5'
+author: "Anaya Hall and Christian Miller"
+date: "5/2/2018"
+output: pdf_document
+fontsize: 11pt
+geometry: margin=.75in 
+---
+
+```{r setup, include=FALSE}
+
+rm(list = ls())
+# Setup
+knitr::opts_chunk$set(echo = TRUE, cache = T)
+# Options
+options(stringsAsFactors = F)
+# Packages
+library(pacman)
+p_load(knitr, kableExtra, tidyverse, dplyr, readr, magrittr, ggplot2, readxl, ascii, sandwich, tinytex)
+
+```
+
+# Part 1: Theory
+(Optional -- skip for now!)
+
+
+# Part 2: Instrumental Variables
+
+## Question 1: NLS80
+Revisit the model from *Problem Set #3*, now including ability.
+
+$log(wage) = \beta_0 + exper \cdot \beta_1 + tenure \cdot \beta_2 + married \cdot \beta_3 + south \cdot \beta_4 + urban \cdot \beta_5 + black \cdot \beta_6 + educ \cdot \beta_7 + abil \cdot \gamma + \epsilon$
+
+```{r read_data, message=FALSE}
+
+# Read in CSV as data.frame
+wage_df <- readr::read_csv("nls80.csv")
+
+# Select only the variables in our model
+wage_df %<>% select(lwage, wage, exper, tenure, married, south, urban, black, educ, iq)
+```
+
+### (a) Bias of coefficient on education
+Derive the bias of $\beta_7$. Show which direction the bias goes in depending on whether the correlation between ability and education is positive or negative.
+
+$abil = \delta_0 + exper \cdot \delta_1 + tenure \cdot \delta_2 + married \cdot \delta_3 + south \cdot \delta_4 + urban \cdot \delta_5 + black \cdot \delta_6 + educ \cdot \delta_7 + \eta$
+
+
+$log(wage) = (\beta_0 + \gamma \delta_0) + exper \cdot (\beta_1 + \gamma \delta_1) + tenure \cdot (\beta_2 + \gamma \delta_2) + married \cdot (\beta_3 + \gamma \delta_3) + south \cdot (\beta_4 + \gamma \delta_4) + urban \cdot (\beta_5 + \gamma \delta_5)  + black \cdot (\beta_6 + \gamma \delta_6) + educ \cdot (\beta_7 + \gamma \delta_7) + \gamma \eta + v$
+
+Assume that all $\delta$’s are zero except for the one on the variable of interest (education)
+
+$log(wage) = \beta_0 + exper \cdot \beta_1 + tenure \cdot \beta_2 + married \cdot \beta_3 + south \cdot \beta_4 + urban \cdot \beta_5  + black \cdot \beta_6 + educ \cdot (\beta_7 + \gamma \delta_7) + \gamma \eta + v$
+
+Where
+
+$plim b_7 = \beta_7 + \gamma \delta_7$
+
+$plim b_7 = \beta_7 + \gamma \cdot \frac {Cov [ abil , educ ]} {Var [educ]}$
+
+Truth is $\beta_7$ , bias is $\gamma \cdot \frac {Cov [ abil , educ ]} {Var [educ]}$
+
+We expect the sign on $\gamma$ to be positive (higher abiltiy should lead to higher wage), the covariance of ability and education to also be positive (more able people acheive higher levels of education), and, of course, the variance of education is positive.
+Thus, the bias will also be *positive* (biased upward! i.e. we will over attribute the effect of education on wage).
+
+### (b) Proxy for ability
+Estimate the model above excluding ability, record your parameter estimates, standard errors and $R^2$.
+
+##### - OLS function -
+First, let's load our OLS function. 
+```{r OLS functions}
+
+# Function to convert tibble, data.frame, or tbl_df to matrix
+to_matrix <- function(the_df, vars) {
+  # Create a matrix from variables in var
+  new_mat <- the_df %>%
+    #Select the columns given in 'vars'
+    select_(.dots = vars) %>%
+    # Convert to matrix
+    as.matrix()
+  # Return 'new_mat'
+  return(new_mat)
+}
+
+
+b_ols <- function(y, X) {
+  # Calculate beta hat
+  beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
+  # Return beta_hat
+  return(beta_hat)
+}
+
+ols <- function(data, y_data, X_data, intercept = T, hetsked = F, H0 = 0, two_tail = T, alpha = 0.05) {
+  # Function setup ----
+    # Require the 'dplyr' package
+    require(dplyr)
+  
+  # Create dependent and independent variable matrices ----
+    # y matrix
+    y <- to_matrix (the_df = data, vars = y_data)
+    # X matrix
+    X <- to_matrix (the_df = data, vars = X_data)
+      # If 'intercept' is TRUE, then add a column of ones
+      if (intercept == T) {
+      X <- cbind(1,X)
+      colnames(X) <- c("intercept", X_data)
+      }
+ 
+  # Calculate b, y_hat, and residuals ----
+    b <- solve(t(X) %*% X) %*% t(X) %*% y
+    y_hat <- X %*% b
+    e <- y - y_hat
+   
+    # Inverse of X'X
+    XX <- t(X) %*% X
+    XX_inv <- solve(t(X) %*% X)
+    
+    if (hetsked == T) {
+      # For each row, calculate x_i' x_i e_i^2; then sum
+     sigma_hat <- lapply(X = 1:n, FUN = function(i) {
+      # Define x_i
+      x_i <- matrix(as.vector(X[i,]), nrow = 1)
+      # Return x_i' x_i e_i^2
+      return(t(x_i) %*% x_i * e[i]^2)
+      }) %>% Reduce(f = "+", x = .) }
+    
+    if (hetsked == F) sigma_hat <- XX
+    
+  # Useful -----
+    n <- nrow(X) # number of observations
+    k <- ncol(X) # number of independent variables
+    dof <- n - k # degrees of freedom
+    i <- rep(1,n) # column of ones for demeaning matrix
+    A <- diag(i) - (1 / n) * i %*% t(i) # demeaning matrix
+    y_star <- A %*% y # for SST
+    X_star <- A %*% X # for SSM
+    SST <- drop(t(y_star) %*% y_star)
+    SSM <- drop(t(b) %*% t(X_star) %*% X_star %*% b)
+    SSR <- drop(t(e) %*% e)
+  
+  # Measures of fit and estimated variance ----
+    R2uc <- drop((t(y_hat) %*% y_hat)/(t(y) %*% y)) # Uncentered R^2
+    R2 <- 1 - SSR/SST # Uncentered R^2
+    R2adj <- 1 - (n-1)/dof * (1 - R2) # Adjusted R^2
+    AIC <- log(SSR/n) + 2*k/n # AIC
+    SIC <- log(SSR/n) + k/n*log(n) # SIC
+    s2 <- SSR/dof # s^2
+  
+  # Measures of fit table ----
+    mof_table_df <- data.frame(R2uc, R2, R2adj, SIC, AIC, SSR, s2)
+    mof_table_col_names <- c("$R^2_\\text{uc}$", "$R^2$",
+                             "$R^2_\\text{adj}$",
+                             "SIC", "AIC", "SSR", "$s^2$")
+    mof_table <-  mof_table_df %>% knitr::kable(
+      row.names = F,
+      col.names = mof_table_col_names,
+      format.args = list(scientific = F, digits = 4),
+      booktabs = T,
+      escape = F
+    )
+  
+  # t-test----
+    # Standard error
+    se <- sqrt(s2 * diag(XX_inv %*% sigma_hat %*% XX_inv)) # Vector of _t_ statistics
+    # Vector of _t_ statistics
+    t_stats <- (b - H0) / se
+    # Calculate the p-values
+    if (two_tail == T) {
+    p_values <- pt(q = abs(t_stats), df = dof, lower.tail = F) * 2
+    } else {
+      p_values <- pt(q = abs(t_stats), df = dof, lower.tail = F)
+    }
+    # Do we (fail to) reject?
+    reject <- ifelse(p_values < alpha, reject <- "Reject", reject <- "Fail to Reject")
+    
+    # Nice table (data.frame) of results
+    ttest_df <- data.frame(
+      # The rows have the coef. names
+      effect = rownames(b),
+      # Estimated coefficients
+      coef = as.vector(b) %>% round(3),
+      # Standard errors
+      std_error = as.vector(se) %>% round(4),
+      # t statistics
+      t_stat = as.vector(t_stats) %>% round(3),
+      # p-values
+      p_value = as.vector(p_values) %>% round(4),
+      # reject null?
+      significance = as.character(reject)
+      )
+  
+    ttest_table <-  ttest_df %>% knitr::kable(
+      col.names = c("", "Coef.", "S.E.", "t Stat", "p-Value", "Decision"),
+      booktabs = T,
+      format.args = list(scientific = F),
+      escape = F,
+      caption = "OLS Results"
+    )
+
+  # Data frame for exporting for y, y_hat, X, and e vectors ----
+    export_df <- data.frame(y, y_hat, e, X) %>% tbl_df()
+    colnames(export_df) <- c("y","y_hat","e",colnames(X))
+  
+  # Return ----
+    return(list(n=n, dof=dof, b=b, se=se, vars=export_df, R2uc=R2uc,R2=R2,
+                R2adj=R2adj, AIC=AIC, SIC=SIC, s2=s2, SST=SST, SSR=SSR,
+                mof_table=mof_table, ttest=ttest_table))
+}
+
+```
+\newpage
+
+
+```{r model1}
+model_1 <- ols(wage_df, y_data = "lwage", 
+               X_data = c("exper", "tenure", "married", "south", "urban", "black", "educ"))
+
+model_1$ttest
+
+model_1$mof
+```
+
+### (c) Include IQ
+(c) Estimate the model including IQ as a proxy, record your parameter estimates, standard errors and $R^2$.
+
+```{r model_iq}
+model_iq <- ols(wage_df, y_data = "lwage", 
+               X_data = c("exper", "tenure", "married", "south", "urban", "black", "educ", "iq"))
+
+model_iq$ttest
+
+model_iq$mof
+```
+
+### (d) Returns on education.
+*What happens to returns to schooling? Does this result confirm your suspicion of how ability and schooling are expected to be correlated?*
+
+When we include IQ, the magnitude of the parameter estimate for the returns on education decreased, which suggests that we were correct in our guess that the estimate from the first OLS regression was upwardly biased. If IQ **is** a good proxy for ability, this does confirm our suspicion that ability is correlated with education. In the first model, some of the returns on ability (IQ) were mis-attributed to education. In the second model, we correct for this, and see that the parameter estimate on ability is indeed significant. As well, we get a better fit, R$^2$, when including the IQ.
+
+
+## Question 2: Recreate results from Card
+
+### (a) Read in data & plot
+```{r read_data2, message=FALSE}
+
+# Read in CSV as data.frame
+card_df <- readr::read_csv("card.csv")
+
+# Select only the variables in our model
+card_df %<>% select(lwage, wage, educ, exper, expersq, black, south, smsa, smsa66, reg661, reg662, reg663, reg664, reg665,reg666, reg667, reg668, nearc4, nearc2)
+
+head(card_df)
+```
+
+
+``` {r plot_series}
+ggplot(data = gather(card_df), aes(x = value)) +
+  geom_histogram() +
+  facet_wrap(~ key, scales = "free") +
+  ggtitle("Histograms of Wage Data variables") +
+  ylab("Count") +
+  xlab("Value") + theme_minimal()
+```
+
+### (b) OLS on log(wage)
+
+``` {r lwage_ols}
+
+rhs_vars <- c("educ", "exper", "expersq", "black", "south", "smsa", "reg661", "reg662", "reg663", "reg664", "reg665", "reg666", "reg667", "reg668", "smsa66")
+
+model1 <- ols(card_df, "lwage", rhs_vars)
+
+model1$ttest
+
+```
+
+
+These point estimates are very close to those of the paper. However, we do not know how to interprent yes/no from the region (reg661-668) and live in SMSA in 1966 (smsa66) variable in comparison to our estimate values.
+
+
+
+### (c) Reduced Form
+Estimate reduced form equation for *educ* containing all of the explanatory variables and the dummy variable *nearc4*
+
+```{r reduced_form via OLS}
+
+rhs_vars <- c("nearc4", "exper", "expersq", "black", "south", "smsa", "reg661", "reg662", "reg663", "reg664", "reg665", "reg666", "reg667", "reg668", "smsa66")
+
+rf <- ols(card_df, "educ", rhs_vars)
+
+rf$ttest
+
+```
+
+
+Yes, the partial correlation between *educ* and *nearc4* IS statistically significant!
+
+### (d) Single IV
+Estimate the *log(wage)* equation by instrumental variables, using *nearc4* as an instrument for *educ*. 
+
+Compare the 95% confidence interval for the return to educutioan to that obtained from the Least Squares regression above.
+
+
+```{r IV_function, message = FALSE}
+
+iv <- function(data, y_var, X_vars, Z_vars, intercept = T, hetsked = T, alpha = 0.05) {
+    y <- to_matrix (the_df = data, vars = y_vars)
+    X <- to_matrix (the_df = data, vars = X_vars)
+    Z <- to_matrix (the_df = data, vars = Z_vars)
+  
+  # Add intercept
+  if (intercept == T) X <- cbind(1, X)
+  if (intercept == T) Z <- cbind(1, Z)
+  # Calculate n and k for degrees of freedom
+  n <- nrow(X)
+  k <- ncol(X)
+  # Estimate coefficients
+  b <- solve(t(Z) %*% X) %*% t(Z) %*% y
+  # Update names
+  if (intercept == T) rownames(b)[1] <- "Intercept" # Calculate OLS residuals
+  e <- y - X %*% b
+  s2 <- (t(e) %*% e) / (n-k)
+  
+  # Calculate X_hat
+  X_hat <- Z %*% solve(t(Z) %*% Z) %*% t(Z) %*% X 
+  # Calculate the inverse of X_hat'X_hat
+  XX <- t(X_hat) %*% X_hat
+  # Inverse of X'X
+  XX_inv <- solve(XX)
+  # Calculate the variance-covariance matrix
+  if (hetsked == T) {
+    sigma_hat <- lapply(X = 1:n, FUN = function(i) {
+      # Define x_i
+      x_i <- matrix(as.vector(X_hat[i,]), nrow = 1) # Return x_i' x_i e_i^2
+      return(t(x_i) %*% x_i * e[i]^2)
+    }) %>% Reduce(f = "+", x = .) 
+  }
+  
+  if (hetsked == F) sigma_hat <- XX
+  # Calculate the standard error
+  se <- sqrt(s2 * diag(XX_inv %*% sigma_hat %*% XX_inv)) # Vector of _t_ statistics
+  t_stats <- (b - 0) / se
+  # Calculate the p-values
+  p_values = pt(q = abs(t_stats), df = n-k, lower.tail = F) * 2 # Names for coefficients
+  var_names <- X_vars
+  if (intercept == T) var_names <- c("Intercept", var_names)
+  
+    # t-test----
+    # Do we (fail to) reject?
+    reject <- ifelse(p_values < alpha, reject <- "Reject", reject <- "Fail to Reject")
+    # Nice table (data.frame) of results
+    results <- data.frame(
+      # The rows have the coef. names
+      effect = rownames(b),
+      # Estimated coefficients
+      coef = as.vector(b) %>% round(3),
+      # Standard errors
+      std_error = as.vector(se) %>% round(4),
+      # t statistics
+      t_stat = as.vector(t_stats) %>% round(3),
+      # p-values
+      p_value = as.vector(p_values) %>% round(4),
+      # reject null?
+      significance = as.character(reject)
+      )
+  
+    ttest_table <-  results %>% knitr::kable(
+      col.names = c("", "Coef.", "S.E.", "t Stat", "p-Value", "Decision"),
+      booktabs = T,
+      format.args = list(scientific = F),
+      escape = F,
+      caption = "IV-OLS Results")
+  
+  return(ttest_table)
+}
+
+Z_vars <- c("nearc4", "exper", "expersq", "black", "south", "smsa", "reg661", "reg662", "reg663", "reg664", "reg665", "reg666", "reg667", "reg668", "smsa66")
+y_vars <- c("lwage")
+X_vars <- c("educ", "exper", "expersq", "black", "south", "smsa", "reg661", "reg662", "reg663", "reg664", "reg665", "reg666", "reg667", "reg668", "smsa66")
+# # Run OLS
+(iv1 <- iv(card_df, y_vars, X_vars, Z_vars, T, T))
+
+
+
+
+```
+
+
+``` {r calc CI}
+# Compare 95% confidence interval for return on education using nearc4 has IV to that of the OLS above (model_1)
+
+iv_b <- 0.1315038
+iv_se <- 0.0210
+
+ols_b <- 0.075
+ols_se <- 0.0035
+
+CI <- function(b, se, alpha=1.96) {
+  CI <- list( (b - alpha*se), (b + alpha*se))
+  return(CI)
+}
+```
+
+``` {r display CI}
+CI(iv_b, iv_se) %>% knitr::kable(caption = "Confidence Interval- Return using nearcr as instrument")
+
+CI(ols_b, ols_se) %>% knitr::kable(caption = "Confidence Interval- Return on education")
+
+
+```
+Wider confidence intervals using *near4c* as IV than in the original model. The 95% confidence interval using the instrument is [0.0903, 0.1727], while from OLS it was [0.0681,0.0819]. 
+
+
+### (e) Multiple IV
+Use *nearc2* and *nearc4* as instruments for *educ.* 
+
+First, lets build a function for two stage least squares (2SLS or TSLS) - Multiple Instruments
+``` {r eds 2sls function}
+b_2sls <- function(data, y_var, X_vars, Z_vars, intercept = T) {
+  # Turn data into matrices
+  y <- to_matrix(data, y_var)
+  X <- to_matrix(data, X_vars)
+  Z <- to_matrix(data, Z_vars)
+  # Add intercept
+  if (intercept == T) X <- cbind(1, X)
+  if (intercept == T) Z <- cbind(1, Z)
+  # Estimate the first stage
+  b_stage1 <- solve(t(Z) %*% Z) %*% t(Z) %*% X
+  # Fit the first stage values
+  X_hat <- Z %*% b_stage1
+  # Estimate the second stage
+  b_stage2 <- solve(t(X_hat) %*% X_hat) %*% t(X_hat) %*% y
+  # Update names
+  if (intercept == T) rownames(b_stage2)[1] <- "Intercept"
+  # Return beta_hat
+  return(b_stage2)
+}
+
+
+````
+
+
+``` {r}
+tsls <- function(data, y_vars, X_vars, Z_vars, intercept = T, hetsked = F) {
+  
+  # Turn data into matrices
+  y <- to_matrix(data, y_vars)
+  X <- to_matrix(data, X_vars)
+  Z <- to_matrix(data, Z_vars)
+  # Calculate n and k for degrees of freedom
+  n <- nrow(X)
+  k <- ncol(X)
+  # Add intercept
+  if (intercept == T) X <- cbind(1, X)
+  if (intercept == T) Z <- cbind(1, Z)
+  
+  redform <- ols(data, y_vars, Z_vars, intercept, hetsked)$ttest
+  
+  # First stage
+  b_stage1 <- solve(t(Z) %*% Z) %*% t(Z) %*% X
+  # Fit the first stage values
+  X_hat <- Z %*% b_stage1
+  # Estimate the second stage
+  b_stage2 <- solve(t(X_hat) %*% X_hat) %*% t(X_hat) %*% y
+ 
+   # INCORRECT STANDARD ERRORS -- use X_hat
+  e_inc <- y - X_hat %*% b_stage2
+  s2_inc <- (t(e_inc) %*% e_inc) / (n-k)
+  s2_inc %<>% as.numeric()
+  XX_inv <- solve(t(X_hat) %*% X_hat)
+  se_inc <- sqrt(s2_inc * diag(XX_inv))
+  
+  # Update names
+  if (intercept == T) rownames(b_stage2)[1] <- "Intercept"
+  
+  
+  # Calculate P_Z
+  P_Z <- Z %*% solve(t(Z) %*% Z) %*% t(Z)
+  # Calculate b_2sls
+  b <- solve(t(X) %*% P_Z %*% X) %*% t(X) %*% P_Z %*% y
+  # Calculate OLS residuals
+  e <- y - X %*% b
+  # Calculate s^2
+  s2 <- (t(e) %*% e) / (n - k)   
+  s2 %<>% as.numeric()
+  # Inverse of X' Pz X
+  XX_inv <- solve(t(X) %*% P_Z %*% X)
+  # Standard error
+  se <- sqrt(s2 * diag(XX_inv))    # These should be the 'correct' standard errors
+  # Vector of _t_ statistics
+  t_stats <- (b - 0) / se
+  t_stats_inc <- (b - 0) / se_inc
+  # Calculate the p-values
+  p_values = pt(q = abs(t_stats), df = n-k, lower.tail = F) * 2
+  p_values_inc = pt(q = abs(t_stats_inc), df = n-k, lower.tail = F) * 2
+
+  # Update names
+  if (intercept == T) rownames(b)[1] <- "Intercept"
+  
+  # Nice table (data.frame) of CORRECT results
+  correct_res <- data.frame(
+    # The rows have the coef. names
+    effect = rownames(b),
+    # Estimated coefficients
+    coef = as.vector(b),
+    # Standard errors
+    std_error = as.vector(se),
+    # t statistics
+    t_stat = as.vector(t_stats),
+    # p-values
+    p_value = as.vector(p_values)
+    )
+  # INCORRECT RESULTS
+    incorrect_res <- data.frame(
+    effect = rownames(b),
+    coef = as.vector(b),
+    std_error = as.vector(se_inc),
+    # t statistics
+    t_stat = as.vector(t_stats_inc),
+    # p-values
+    p_value = as.vector(p_values_inc)
+  )
+
+  results_list <- list()
+  
+  # Return the results
+  return(list(correctSE = correct_res, incorrectSE = incorrect_res, redform = redform))
+  
+}
+
+Z_vars <- c("nearc4", "nearc2", "exper", "expersq", "black", "south", "smsa", "reg661", "reg662", "reg663", "reg664", "reg665", "reg666", "reg667", "reg668", "smsa66")
+y_vars <- c("lwage")
+X_vars <- c("educ", "exper", "expersq", "black", "south", "smsa", "reg661", "reg662", "reg663", "reg664", "reg665", "reg666", "reg667", "reg668", "smsa66")
+```
+
+
+``` {r run 2sls}
+#RUN FUNCTION
+two_stage <- tsls(data = card_df, y_vars, X_vars, Z_vars, T, F)
+
+# Reduced Form Results
+two_stage$redform 
+
+```
+
+*Comment on the significance of the partial correlations of both instruments in the reduced form.* 
+
+Both instruments (*nearc4* and *nearc2*) show positive and significant effects.
+
+*Show your standard errors from the second stage and compare them to the correct standard errors.*
+
+``` {r correct v incorrect SE in 2sls}
+
+two_stage$correctSE %>% knitr::kable(caption = "Correct Standard Errors")
+
+two_stage$incorrectSE %>% knitr::kable(caption = "Incorrect Standard Errors")
+
+
+```
+
+
+### (f) Hausman test
+*Should we worry about endogenaity?*
+Conduct a Hausman test for endogeneity of educ. Report your test statistic, critical value and p-value.
+
+Procedure:
+
+1. Regress endogenous var X on instrument(s) Z. save residuals as v_hat
+
+2. Include v_hat in original model
+
+3. test if paramater coefficient on v-hat = 0 (ttest)
+
+*Note: This test is only valid asymptotically (and, of course, is only as good as the instruments used).
+
+
+``` {r}
+Z_vars <- c("exper", "expersq", "black", "south", "smsa",
+              "smsa66", "reg661", "reg662", "reg663", "reg664",
+              "reg665", "reg666", "reg667", "reg668", "nearc4", "nearc2")
+
+card_df %<>% mutate(v_hat = ols(card_df,"educ",Z_vars,T,F)$vars$e)
+
+X_vars <- c("educ", "exper", "expersq", "black", "south", "smsa", "reg661", "reg662", "reg663", "reg664", "reg665", "reg666", "reg667", "reg668", "smsa66", "v_hat")
+
+orig <- ols(card_df,"lwage",X_vars,T,F,alpha = 0.05)
+
+orig$ttest
+
+
+```
+
+The test statistic on v_hat is -1.710, corresponding to a p-value of 0.0873. The critical value for a 95% confidence level (significance level of 0.05) is $\pm$ 1.96, thus we fail to reject the null hypothesis, finding no significant evidence of endogeneity.
+
+

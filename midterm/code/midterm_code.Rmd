@@ -443,7 +443,7 @@ ggplot(simb1000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= li
 ggplot(simb10000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="10000 Iterations")
 ```
 ```{r}
-ggplot(simb20000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="20000 Iterations")
+ggplot(simb20000, aes(x=b2)) + geom_density() + stat_function(fun=dnorm, args= list(mean= -2), color="blue") + labs(title="N = 20000")
 
 ```
 

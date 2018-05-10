@@ -1,0 +1,122 @@
+General R setup ----#
+# Options#
+options(stringsAsFactors = F)#
+# Load new packages#
+pacman::p_load(lubridate, rgdal, raster, broom, rgeos, GISTools)#
+# Load old packages#
+pacman::p_load(dplyr, ggplot2, ggthemes, magrittr, viridis)#
+# My ggplot2 theme#
+theme_ed <- theme(#
+  legend.position = "bottom",#
+  panel.background = element_rect(fill = NA),#
+  # panel.border = element_rect(fill = NA, color = "grey75"),#
+  axis.ticks = element_line(color = "grey95", size = 0.3),#
+  panel.grid.major = element_line(color = "grey95", size = 0.3),#
+  panel.grid.minor = element_line(color = "grey95", size = 0.3),#
+  legend.key = element_blank())#
+# My directory#
+dir_12 <- "/Users/edwardarubin/Dropbox/Teaching/ARE212/Section12/"#
+#
+# Loading a shapefile ----#
+# Load the shapefile with the Chicago beats data#
+beats_shp <- readOGR(#
+  dsn = paste0(dir_12, "ChicagoPoliceBeats"),#
+  layer = "chiBeats")#
+#
+# Class#
+class(beats_shp)#
+# Dimensions#
+dim(beats_shp)#
+# Plot#
+plot(beats_shp)#
+#
+# Decomposing a shapefile ----#
+# Fied/variable names#
+names(beats_shp)#
+# Slot names#
+slotNames(beats_shp)#
+#
+# Check the class of the object in the 'data' slot#
+beats_shp@data %>% class()#
+# Check the head of the object in the 'data' slot#
+beats_shp@data %>% head()#
+# Check the head of the object in the 'data' slot#
+beats_shp@data %>% dim()#
+#
+# 'plotOrder' slot#
+beats_shp@plotOrder %>% head()#
+# 'bbox' slot#
+beats_shp@bbox#
+# 'proj4string' slot#
+beats_shp@proj4string
+# Load the shapefile with the Chicago beats data#
+beats_shp <- readOGR(#
+  dsn = paste0(dir_12, "ChicagoPoliceBeats"),#
+  layer = "chiBeats")
+dir_12 <- "/Users/anayahall/Box Sync/Berkeley/ARE 212 - Econometrics/Textbooks/section/Section12"
+beats_shp <- readOGR(#
+  dsn = paste0(dir_12, "ChicagoPoliceBeats"),#
+  layer = "chiBeats")
+dir_12 <- "/Users/anayahall/Box Sync/Berkeley/ARE 212 - Econometrics/Textbooks/section/Section12/"
+# Load the shapefile with the Chicago beats data#
+beats_shp <- readOGR(#
+  dsn = paste0(dir_12, "ChicagoPoliceBeats"),#
+  layer = "chiBeats")
+# Class#
+class(beats_shp)#
+# Dimensions#
+dim(beats_shp)#
+# Plot#
+plot(beats_shp)#
+#
+# Decomposing a shapefile ----#
+# Fied/variable names#
+names(beats_shp)#
+# Slot names#
+slotNames(beats_shp)#
+#
+# Check the class of the object in the 'data' slot#
+beats_shp@data %>% class()
+# Check the head of the object in the 'data' slot#
+beats_shp@data %>% head()#
+# Check the head of the object in the 'data' slot#
+beats_shp@data %>% dim()#
+#
+# 'plotOrder' slot#
+beats_shp@plotOrder %>% head()#
+# 'bbox' slot#
+beats_shp@bbox#
+# 'proj4string' slot#
+beats_shp@proj4string#
+#
+# Find the class#
+beats_shp@polygons %>% class()#
+# Find the length of the list#
+beats_shp@polygons %>% length()
+# Class of the first element in the 'polygons' slot#
+beats_shp@polygons[[1]] %>% class()#
+#
+# Slot names for a polygon#
+beats_shp@polygons[[1]] %>% slotNames()
+# Class of the first element in the 'polygons' slot#
+beats_shp@polygons[[1]] %>% class()#
+#
+# Slot names for a polygon#
+beats_shp@polygons[[1]] %>% slotNames()
+# What is the class?#
+beats_shp@polygons[[1]]@Polygons %>% class()#
+# What is the length?#
+beats_shp@polygons[[1]]@Polygons %>% length()
+# Deep in the rabbit hole#
+beats_shp@polygons[[1]]@Polygons[[1]] %>% slotNames()
+# Deep in the rabbit hole#
+beats_shp@polygons[[1]]@Polygons[[1]] %>% slotNames()#
+#
+# The head of the coordinates#
+beats_shp@polygons[[1]]@Polygons[[1]]@coords %>% head()#
+# The dimensions of the coordinates#
+beats_shp@polygons[[1]]@Polygons[[1]]@coords %>% dim()#
+# Plot the coordinates#
+beats_shp@polygons[[1]]@Polygons[[1]]@coords %>% plot()#
+#
+subset(beats_shp, beat_num == "1713") %>% plot()
