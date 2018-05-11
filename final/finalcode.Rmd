@@ -230,16 +230,16 @@ Estimate the three $\beta$ coefficients again using least squares. Do this for $
 
 sigma2 <- c(1,10,100)
 
-# for (s in sigma2) {
-#   # Generate r_i
-#   r <- rnorm(N, 0, s)
-# 
-#   # Add new error to y
-#   pop_df %<>% mutate(y_err = y + r)
-# 
-#   # Rerun OLS
-#   ols(pop_df, "y_err", X_mat)$b %>% knitr::kable()
-# }
+for (s in sigma2) {
+  # Generate r_i
+  r <- rnorm(N, 0, s)
+
+  # Add new error to y
+  pop_df %<>% mutate(y_err = y + r)
+
+  # Rerun OLS
+  ols(pop_df, "y_err", X_mat)$b
+}
 
 # Generate r_i
 r <- rnorm(N, 0, 1)
@@ -298,8 +298,27 @@ cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
 ```
 
 
-| Tables        | Are           | Are           | Cool  |
-|---------------|:-------------:|:-------------:|------:|
-| col 3 is      | right-aligned | right-aligned | $1600 |
-| col 2 is      | centered      | centered      |   $12 |
-| zebra stripes | are neat      | are neat      |    $1 |
+|               | Bias beta_0   | Bias beta-1   | Bias beta-2   |
+|---------------|:-------------:|:-------------:|:-------------:|
+| Step 2        | right-aligned | right-aligned | $1600         |
+| col 2 is      | centered      | centered      |   $12         |
+| zebra stripes | are neat      | are neat      |    $1         |
+| zebra stripes | are neat      | are neat      |    $1         |
+| zebra stripes | are neat      | are neat      |    $1         |
+| zebra stripes | are neat      | are neat      |    $1         |
+| zebra stripes | are neat      | are neat      |    $1         |
+
+```{r}
+
+sim_array <-  array(NA, dim = c(1e5, 3, 3))
+
+for (i in 1:1e5) {
+  for (s in sigma2) {
+    print(s)
+  }
+}
+```
+
+
+
+
