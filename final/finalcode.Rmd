@@ -11,7 +11,7 @@ geometry: margin=.75in
 knitr::opts_chunk$set(echo = TRUE)
 rm(list = ls())
 # Setup
-knitr::opts_chunk$set(echo = TRUE, cache = T)
+knitr::opts_chunk$set(echo = TRUE, cache = F)
 # Options
 options(stringsAsFactors = F)
 # Packages
