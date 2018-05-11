@@ -362,7 +362,7 @@ sim_array <-  array(NA, dim = c(1e5, 3, 3))
 
 
 
-one_iter <- function(N, seed) {
+one_iter <- function(N) {
   
   set.seed(seed)
   
@@ -496,11 +496,28 @@ big_bias_mat <- array(NA, dim = c(n_iter, 12,3))
 
 set.seed(seed)
 
-for (i in 1:n_iter) {
+# for (i in 1:n_iter) {
+# 
+#   big_bias_mat[i,,] <- one_iter(100, seed)
+#   
+# }
 
-  big_bias_mat[i,,] <- one_iter(100, seed)
-  
+bias_sim <- function(n_sims, sample_size, seed = 12345) {
+  # Set the seed
+  set.seed(seed)
+  # Run one_sim n_sims times; convert results to data.frame
+  sim_df <- replicate(
+    n = n_sims,
+    expr = one_iter(sample_size),
+    simplify = F
+    ) #%>% bind_rows()
+  # Return sim_df
+  return(sim_df)
 }
+
+bias_sim(50, 100, seed =22092008)
+
+
 ```
 
 
