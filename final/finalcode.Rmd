@@ -11,7 +11,7 @@ geometry: margin=.75in
 knitr::opts_chunk$set(echo = TRUE)
 rm(list = ls())
 # Setup
-knitr::opts_chunk$set(echo = TRUE, cache = F)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 # Options
 options(stringsAsFactors = F)
 # Packages
@@ -63,7 +63,7 @@ pop_df <- as.data.frame(cbind(y, x1, x2))
 Generate y variables (done above). Estimate the three $\beta$ coefficients using least squares. Calculate the difference between the true $\beta$ and the estimated coefficient for each of the three $\beta$ coefficients.
 
 First, let's load our OLS functions from the last few problem sets:
-```{r OLS functions}
+```{r OLS functions, include = FALSE}
 
 # Function to convert tibble, data.frame, or tbl_df to matrix
 to_matrix <- function(the_df, vars) {
@@ -77,13 +77,6 @@ to_matrix <- function(the_df, vars) {
   return(new_mat)
 }
 
-
-b_ols <- function(y, X) {
-  # Calculate beta hat
-  beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
-  # Return beta_hat
-  return(beta_hat)
-}
 
 ols <- function(data, y_data, X_data, intercept = T, hetsked = F, H0 = 0, two_tail = T, alpha = 0.05) {
   # Function setup ----
@@ -204,6 +197,17 @@ ols <- function(data, y_data, X_data, intercept = T, hetsked = F, H0 = 0, two_ta
 
 ```
 
+``` {r simple b ols}
+
+b_ols <- function(y, X) {
+  # Calculate beta hat
+  beta_hat <- solve(t(X) %*% X) %*% t(X) %*% y
+  # Return beta_hat
+  return(beta_hat)
+}
+
+```
+  
 
 Now ready to estimate!
 
@@ -217,12 +221,12 @@ X_mat <- pop_df[,2:3] %>% cbind(1,.) %>% as.matrix()
 st2 <- b_ols(pop_df$y, X_mat)
 
 # Calculate BIAS
-bias_mat <- data_frame(
+bias_mat_s2 <- data_frame(
   bias_0 = (st2[1] - 1),
   bias_1 = (st2[2] - (-0.75)),
   bias_2 = (st2[3] - (0.75))) 
 
-bias_mat %>% knitr::kable()
+bias_mat_s2 %>% knitr::kable()
 
 ```
 
@@ -254,7 +258,7 @@ for (s in sigma2) {
 
 }
 
-bias_mat %>% knitr::kable(col.names = c("sigma^2: 1", "sigma2: 10", "sigma2: 100"))
+bias_mat %>% knitr::kable(col.names = c("sigma2: 1", "sigma2: 10", "sigma2: 100"))
 
 ```
 
@@ -290,6 +294,7 @@ bias_mat %>% knitr::kable(col.names = c("sigma2: 1", "sigma2: 10", "sigma2: 100"
 
 
 ```
+
 Now we start to see a good amount of bias on the coefficient on X2 (althuogh the coefficient on the intercept still has the most bias.) Again, the bias increases with increasing variance of $r_i$.
 
 ### 5. Non-symmetric measurement error: POSITIVE
@@ -313,6 +318,7 @@ row.names(bias_mat) <- c("Intercept", "X1", "X2")
 bias_mat %>% knitr::kable(col.names = c("sigma2: 100"))
 
 ```
+
 Here, we're just looking at the bias when $\sigma^2$ = 100 and the measurement error is positive. The bias on each $\beta$ coefficient has ~doubled with this non-symmetric measurement error. 
 
 
@@ -340,21 +346,18 @@ bias_mat %>% knitr::kable(col.names = c("sigma2: 100"))
 
 
 ```
+
 Again, the bias has about doubled from step 4 with non-symmetric measurement error. The coefficients on the intercept as well as $x_1$ have both also changed sign!
 
-### SCALE UP!
+### Time to SCALE UP!
 Repeat the above steps 10,000 times (set the seed only the first time, not each time) and calculate the bias for $\beta_0$, $\beta_1$ and $\beta_2$ for each setting and fill in the table below. 
 
 ```{r final simulation}
 
 sim_array <-  array(NA, dim = c(1e5, 3, 3))
 
-
-
 one_iter <- function(N) {
-  
-  set.seed(seed)
-  
+
   # Generate the data for X and E
   x1 = runif(n = N, min = -200, max = 200)
   x2 = runif(n = N, min = -200, max = 200)
@@ -364,19 +367,17 @@ one_iter <- function(N) {
   
   # Join the data together
   pop_df <- as.data.frame(cbind(y, x1, x2))
-  
   X_mat <- pop_df[,2:3] %>% cbind(1,.) %>% as.matrix()
 
-  sigma2 <- c(1,10,100)
-
   #Step 3: Meas. Error in Y
+  
+  sigma2 <- c(1,10,100)
   
   bias_mat_s3 <- array(NA, dim = c(3,3))
 
   for (s in sigma2) {
     i <- which(sigma2 == s)
     # Generate r_i
-    set.seed(seed)
     r <- rnorm(N, 0, s)
     # Add new error to y
     pop_df %<>% mutate(y_err = y + r)
@@ -447,12 +448,14 @@ one_iter <- function(N) {
   }
   
   results_df <- rbind(bias_mat_s3, bias_mat_s4, bias_mat_s5, bias_mat_s6)
+  colnames(results_df) <- c("sigma_1", "sigma_10", "sigma_100")
   
   return(results_df)
   
 }
 
-#one_iter(100)
+# test to make sure it works!
+one_iter(100)
 
 ```
 
@@ -461,7 +464,7 @@ one_iter <- function(N) {
 
 ``` {r run MC}
 
-n_iter <- 10
+n_iter <- 10000
 seed <- 22092008
 
 # Prepare 3-d array for storing results
@@ -469,51 +472,46 @@ big_bias_mat <- array(NA, dim = c(n_iter, 12,3))
 
 set.seed(seed)
 
+# Run 10000 simulations
 for (i in 1:n_iter) {
-
   big_bias_mat[i,,] <- one_iter(100)
-
 }
 
-results <- array(12,3)
+# Create array for average of results
+mean_bias <- array(NA, c(12,3))
+colnames(mean_bias) <- c("sigma_1", "sigma_10", "sigma_100")
+row.names(mean_bias) <- c("3Intercept", "3X1", "3X2","4Intercept", "4X1", "4X2","5Intercept", "5X1", "5X2","6Intercept", "6X1", "6X2")
 
-# for (i in 1:12) & (j in 1:3) {
-#         print(i,j) 
-#         #results[i,j] <- mean(big_bias_mat[,j,i])
-#     }
+# Loop to take mean across simulations and save output
+for (i in 1:12) {
+    for (j in 1:3) {
+        mean_bias[i,j] <- mean(big_bias_mat[,i,j])
+  } }
 
-
-# bias_sim <- function(n_sims, sample_size, seed = 12345) {
-#   # Set the seed
-#   set.seed(seed)
-#   # Run one_sim n_sims times; convert results to data.frame
-#   sim_df <- replicate(
-#     n = n_sims,
-#     expr = one_iter(sample_size),
-#     simplify = F
-#     ) 
-#   # Return sim_df
-#   return(sim_df)
-# }
-# 
-# bias_sim(50, 100, seed =22092008)
-
-
+bias_mat_s2         # Original bias results from step 2
+t(mean_bias)        # Transpose results so easier to read into table below!
 ```
 
-What have you learned from this exercise that you did not know before? Was there anything surprising?
+### Final results table
+
 
 
 |                           |Bias $\beta_0$ |Bias $\beta_1$ |Bias $\beta_2$ |
-|---------------------------|:-------------:|:-------------:|:-------------:|
+|---------------------------|:--------------|:--------------|:--------------|
 | Step 2                    | -0.0925107    | 0.0001089     | -0.0001058    |
-| Step 3 ($\sigma^2$ = 1)   |  0.1327935    | -6.169714e-05 | 6.147005e-04  |
-| Step 3 ($\sigma^2$ = 10)  | 2.1605317     | -1.597147e-03 | 0.0070989     |
-| Step 3 ($\sigma^2$ = 100) | 22.4379135    | -1.695165e-02 |   0.071940    |
-| Step 4 ($\sigma^2$ = 1)   | -2.293300e-02      | 2.755397e-05      |   -1.302244e-05         |
-| Step 4 ($\sigma^2$ = 10)  | -1.3014183389      | -2.221322e-03      |   4.130867e-03        |
-| Step 4 ($\sigma^2$ = 100) |-10.111527       |-2.499077e-02     |    -3.085128e-01         |
-| Step 5 ($\sigma^2$ = 100) | -49.7100828 | 0.0675275515 | -0.1374962359         |
-| Step 6 ($\sigma^2$ = 100) |48.96150816 | 0.02880406 | -0.14629597      |
+| Step 3 ($\sigma^2$ = 1)   |  -0.001013074 | -7.139338e-06 | 6.620332e-06  |
+| Step 3 ($\sigma^2$ = 10)  | 0.002766648   | -1.273098e-05 | 1.046166e-04  |
+| Step 3 ($\sigma^2$ = 100) | 22.4379135    | 6.636537e-04  |  8.169639e-05 |
+| Step 4 ($\sigma^2$ = 1)   | -0.0001427097 | -2.201842e-05 | -4.033294e-05 |
+| Step 4 ($\sigma^2$ = 10)  | -0.0108522832 | 1.101392e-05  | -5.479777e-03 |
+| Step 4 ($\sigma^2$ = 100) | 0.0927713100  |1.483872e-03   | -3.205047e-01 |
+| Step 5 ($\sigma^2$ = 100) | -47.0630331   | 5.221453e-04  | -1.594324e-01 |
+| Step 6 ($\sigma^2$ = 100) | 47.1203795    | 7.107956e-04  | -1.587771e-01 |
 
+*Note- I calculated bias as the estimated coefficient less the true coefficient*
 
+It seems like measurement error is biasing our estimates towards zero for the most part. The bias is worse (that is, bigger!) with the measurement error has larger variance, which is what I would have expected. As described earlier, it also seems to have the largest impact on the coefficient on the intercept. I am surprised that the bias is similar with positive and negative non-symmetric measurement error (steps 5 and 6). 
+
+Unrelated to bias or measurement error- I learned how to deal with slash think about three-dimensional arrays on this assessment. I consider that a win!
+
+P.S. I'm not sure I set up the simulation correctly, but I did get it to run (unlike in the take-home midterm when the simulation crashed my computer). Thank you for a lovely semester and making econometrics enjoyable :)
