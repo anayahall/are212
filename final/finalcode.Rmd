@@ -16,24 +16,25 @@ knitr::opts_chunk$set(echo = TRUE, cache = T)
 options(stringsAsFactors = F)
 # Packages
 library(pacman)
-p_load(knitr, kableExtra, tidyverse, dplyr, readr, magrittr, ggplot2, readxl, ascii, sandwich, tinytex)
+p_load(knitr, kableExtra, tidyverse, dplyr, readr, magrittr, ggplot2, readxl, ascii, sandwich, tinytex, parallel)
 
 ```
 
-## ARE212 Take-home Final: Exploring Measurement Error.
+## ARE212 Take-home Final: Exploring Measurement Error
 
 In this assessment we explore what happens to the least squares estimator for varying degrees of measurement error in the left hand and right hand side variables. Assume the following population model:
 
-$y_i^* = \beta_0 + \beta_1 \cdot x_{1i} + \beta_2 \cdot x_{2i} + \epsilon_i$
+  $y_i^* = \beta_0 + \beta_1 \cdot x_{1i} + \beta_2 \cdot x_{2i} + \epsilon_i$
+
 
 Assume: 
-$E[\epsilon|x] = 0$ and $\epsilon$ is drawn from a normal distribution (0,1)
+  $E[\epsilon|x] = 0$ and $\epsilon$ is drawn from a normal distribution (0,1)
 
-$x_{1i}$ and $x_{2i}$ drawn from uniform normal [-200, 200]
+  $x_{1i}$ and $x_{2i}$ drawn from uniform normal [-200, 200]
 
-$\beta_0$ = 1, $\beta_1$ = -0.75, $\beta_2$ = 0.75
+  $\beta_0$ = 1, $\beta_1$ = -0.75, $\beta_2$ = 0.75
 
-Set seed to 22092008.
+  Set seed to 22092008.
 
 ### 1. Generate random sample
 
@@ -203,20 +204,25 @@ ols <- function(data, y_data, X_data, intercept = T, hetsked = F, H0 = 0, two_ta
 
 ```
 
+
 Now ready to estimate!
 
 ``` {r estimate w OLS}
-X_mat <- c("x1", "x2")
-q2 <- ols(data = pop_df, y_data = "y", X_data = X_mat, intercept = T)
 
-q2$b %>% knitr::kable()
+true_b <- matrix(c(1,-.75,.75), ncol=1)
+# Select X matrix, add intercept column and convert to matrix
+X_mat <- pop_df[,2:3] %>% cbind(1,.) %>% as.matrix()
 
-diff_mat <- data_frame(
-  diff0 = (q2$b[1] - 1),
-  diff1 = (q2$b[2] - (-0.75)),
-  diff2 = (q2$b[3] - (0.75))) 
+# Run OLS
+st2 <- b_ols(pop_df$y, X_mat)
 
-diff_mat %>% knitr::kable()
+# Calculate BIAS
+bias_mat <- data_frame(
+  bias_0 = (st2[1] - 1),
+  bias_1 = (st2[2] - (-0.75)),
+  bias_2 = (st2[3] - (0.75))) 
+
+bias_mat %>% knitr::kable()
 
 ```
 
@@ -228,74 +234,116 @@ Estimate the three $\beta$ coefficients again using least squares. Do this for $
 
 ``` {r question3}
 
+# Again select X matrix, add intercept column and convert to matrix
+X_mat <- pop_df[,2:3] %>% cbind(1,.) %>% as.matrix()
+
 sigma2 <- c(1,10,100)
 
-for (s in sigma2) {
-  # Generate r_i
-  r <- rnorm(N, 0, s)
+bias_mat <- array(NA, dim = c(3,3))
 
+for (s in sigma2) {
+  i <- which(sigma2 == s)
+  # Generate r_i
+  set.seed(22092008)
+  r <- rnorm(N, 0, s)
   # Add new error to y
   pop_df %<>% mutate(y_err = y + r)
-
   # Rerun OLS
-  ols(pop_df, "y_err", X_mat)$b
+  bias_mat[,i] <- (b_ols(pop_df$y_err, X_mat) - true_b)
+  row.names(bias_mat) <- c("Intercept", "X1", "X2")
+
 }
 
-# Generate r_i
-r <- rnorm(N, 0, 1)
-# Add new error to y
-pop_df %<>% mutate(y_err = y + r)
-# Rerun OLS
-ols(pop_df, "y_err", X_mat)$b %>% knitr::kable()
-
-# Generate r_i
-r <- rnorm(N, 0, 10)
-# Add new error to y
-pop_df %<>% mutate(y_err = y + r)
-# Rerun OLS
-ols(pop_df, "y_err", X_mat)$b %>% knitr::kable()
-
-# Generate r_i
-r <- rnorm(N, 0, 100)
-# Add new error to y
-pop_df %<>% mutate(y_err = y + r)
-# Rerun OLS
-ols(pop_df, "y_err", X_mat)$b %>% knitr::kable()
-
-
-
+bias_mat %>% knitr::kable(col.names = c("sigma^2: 1", "sigma2: 10", "sigma2: 100"))
 
 ```
 
-Worse coefficients!!
+More bias! (our coefficients are much further from truth)!! Intercept seems to be absorbing a lot of this error.
+
 ### 4. Measurement Error on x2
 Now assume that your $x_{2i}$ is measured with error. You observe $x_2^*$ = $x_{2i}$ + $r_i$, where $r_i$ is drawn from a random normal distribution with mean zero and variance $\sigma^2$ (Just reuse the $r_i$ from the previous step.). Use the $y_i$ from the first step (the one measured without error) and replace $x_{2i}$ with $x_2^*$ in your estimation. Estimate the three $\beta$ coefficients using least squares on your data. Do this for $\sigma^2$ = [1 10 100].
 
 ``` {r q4}
 
+set.seed(22092008)
+sigma2 <- c(1,10,100)
 
+bias_mat <- array(NA, dim = c(3,3))
+
+for (s in sigma2) {
+  i <- which(sigma2 == s)
+  # Generate r_i
+  set.seed(22092008)
+  r <- rnorm(N, 0, s)
+  # Add new error to y
+  pop_df %<>% mutate(x2_star = x2 + r)
+  
+  X_mat_star <- pop_df[['x1']] %>% cbind(. , pop_df[['x2_star']]) %>% cbind(1,.) %>% as.matrix()
+  
+  # Rerun OLS
+  bias_mat[,i] <- (b_ols(pop_df$y, X_mat_star) - true_b)
+  row.names(bias_mat) <- c("Intercept", "X1", "X2")
+
+}
+
+bias_mat %>% knitr::kable(col.names = c("sigma2: 1", "sigma2: 10", "sigma2: 100"))
 
 
 ```
-
+Now we start to see a good amount of error in the coefficient on X2. 
 
 ### 5. Non-symmetric measurement error: POSITIVE
 Repeat step 4 exactly, only now assume that your measurement error is not symmetric, but always positive. Simply take the absolute value of $r_i$ (again using the $r_i$ from above) before generating your $x_2^*$. Only do this for $\sigma^2$ = 100.
 
+``` {r q5}
+
+bias_mat <- array(NA, dim = c(3,1))
+
+set.seed(22092008)
+r <- rnorm(N, 0, 100) %>% abs()
+# Add new error to y
+pop_df %<>% mutate(x2_star = x2 + r)
+
+X_mat_star <- pop_df[['x1']] %>% cbind(. , pop_df[['x2_star']]) %>% cbind(1,.) %>% as.matrix()
+
+# Rerun OLS
+bias_mat[,1] <- (b_ols(pop_df$y, X_mat_star) - true_b)
+row.names(bias_mat) <- c("Intercept", "X1", "X2")
+
+bias_mat %>% knitr::kable(col.names = c("sigma2: 100"))
+
+```
+
+
+
 ### 6. Non-symmetric measurement errror: NEGATIVE
 Repeat step 4 exactly, only now assume that your measurement error is not symmetric, but always negative. Simply take the absolute value of $r_i$ and multiply it times (-1) before generating your $x_2^*$ (again using the $r_i$ from above). Only do this for $\sigma^2$ = 100.
 
+
+``` {r q6}
+
+bias_mat <- array(NA, dim = c(3,1))
+
+set.seed(22092008)
+r <- rnorm(N, 0, 100) %>% abs()
+# Add new error to y
+pop_df %<>% mutate(x2_star = x2 + (-r))
+
+X_mat_star <- pop_df[['x1']] %>% cbind(. , pop_df[['x2_star']]) %>% cbind(1,.) %>% as.matrix()
+
+# Rerun OLS
+bias_mat[,1] <- (b_ols(pop_df$y, X_mat_star)  - true_b)
+row.names(bias_mat) <- c("Intercept", "X1", "X2")
+
+
+bias_mat %>% knitr::kable(col.names = c("sigma2: 100"))
+
+
+```
+
+
 ### SCALE UP!
 Repeat the above steps 10,000 times (set the seed only the first time, not each time) and calculate the bias for $\beta_0$, $\beta_1$ and $\beta_2$ for each setting and fill in the table below. What have you learned from this exercise that you did not know before? Was there anything surprising?
-
-
-
-```{r table2, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
-tabl <- "  # simple table creation here
-
-"
-cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
-```
 
 
 |               | Bias beta_0   | Bias beta-1   | Bias beta-2   |
@@ -308,15 +356,32 @@ cat(tabl) # output the table in a format good for HTML/PDF/docx conversion
 | zebra stripes | are neat      | are neat      |    $1         |
 | zebra stripes | are neat      | are neat      |    $1         |
 
-```{r}
+```{r final simulation}
 
 sim_array <-  array(NA, dim = c(1e5, 3, 3))
 
-for (i in 1:1e5) {
-  for (s in sigma2) {
-    print(s)
-  }
+run_sim <- function(n, n_iter, data, n_cores = 4) {
+  # Required packages
+  require(dplyr)
+  require(parallel)
+  require(magrittr)
+  # Run 'one_iter' 'n_iter' times with sample size 'n'
+  run_df <- mclapply(
+    X = rep(n, n_iter),
+    FUN = one_iter,
+    data = data,
+    mc.cores = n_cores) %>% bind_rows() %>% tbl_df()
+  # Return run_df
+  return(run_df)
 }
+
+
+
+# for (i in 1:1e5) {
+#   for (s in sigma2) {
+#     print(s)
+#   }
+# }
 ```
 
 
